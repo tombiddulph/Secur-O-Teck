@@ -1,30 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Web.Http.Description;
 
 namespace SecuroteckWebApplication.Controllers
 {
     public class TalkBackController : ApiController
     {
         [ActionName("Hello")]
-        public string Get()
+        public HttpResponseMessage Get()
         {
-            #region TASK1
-            // TODO: add api/talkback/hello response
-            #endregion
+            return Request.CreateResponse(HttpStatusCode.OK, "Hello World");
         }
 
+        
+
+
         [ActionName("Sort")]
-        public int[] Get([FromUri]int[] integers)
+        [ResponseType(typeof(int[]))]
+        public HttpResponseMessage Get([FromUri] int[] integers)
         {
-            #region TASK1
-            // TODO: 
-            // sort the integers into ascending order
-            // send the integers back as the api/talkback/sort response
-            #endregion
+            if (integers.Length == 0)
+            {
+                return Request.CreateResponse(HttpStatusCode.OK);
+            }
+
+            return Request.CreateResponse(HttpStatusCode.OK, integers.OrderBy(x => x).ToArray());
         }
 
     }

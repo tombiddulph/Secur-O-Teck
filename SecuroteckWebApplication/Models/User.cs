@@ -13,6 +13,17 @@ namespace SecuroteckWebApplication.Models
         // TODO: Create a User Class for use with Entity Framework
         // Note that you can use the [key] attribute to set your ApiKey Guid as the primary key 
         #endregion
+
+
+        public User()
+        {
+
+        }
+
+        [Key]
+        public Guid ApiKey { get; set; }
+
+        public string UserName { get; set; }
     }
 
     #region Task11?
