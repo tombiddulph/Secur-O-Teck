@@ -99,7 +99,7 @@ namespace SecuroteckWebApplication.Models
             return _context.Users.FirstOrDefault(x => x.UserName == userName);
         }
 
-      
+
 
         public bool CheckUser(Func<User, bool> selector)
         {
@@ -128,7 +128,10 @@ namespace SecuroteckWebApplication.Models
 
         public void DeleteUser(User user)
         {
-
+            if (this.CheckUser(x => x == user))
+            {
+                this._context.Users.Remove(user);
+            }
         }
 
         public void UpdateUser(User user)

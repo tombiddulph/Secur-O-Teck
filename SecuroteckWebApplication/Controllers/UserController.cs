@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Services.Protocols;
 using SecuroteckWebApplication.Controllers.Authorisation;
 using SecuroteckWebApplication.Models;
 
@@ -65,6 +66,34 @@ namespace SecuroteckWebApplication.Controllers
 
 
             return Request.CreateResponse(HttpStatusCode.OK, user.ApiKey);
+        }
+
+        [CustomAuthorise]
+        [ActionName("RemoveUser")]
+        [HttpDelete]
+        public async Task<HttpResponseMessage> DeleteUser([FromBody] string userName)
+        {
+            User user = null;
+            IEnumerable<string> values;
+            if (Request.Headers.TryGetValues("ApiKey", out values))
+            {
+                var apiKey = values.ToList().FirstOrDefault();
+
+                Guid result;
+
+                if (Guid.TryParse(apiKey, out result))
+                {
+                    user = _userRepository.GetUser(x => x.UserName == userName && x.ApiKey == apiKey);
+
+                    if (user != null)
+                    {
+                        _userRepository.DeleteUser(user);
+                        await _userRepository.SaveChanges();
+                    }
+                }
+            }
+
+            return Request.CreateResponse(HttpStatusCode.OK, user != null);
         }
     }
 }
