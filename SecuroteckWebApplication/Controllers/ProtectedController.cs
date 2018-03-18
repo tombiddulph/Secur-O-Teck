@@ -110,12 +110,38 @@ namespace SecuroteckWebApplication.Controllers
                 return Request.CreateResponse(HttpStatusCode.BadRequest);
             }
 
-          
+
 
             var item = this._rsaCrypto.SignHash(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)), CryptoConfig.MapNameToOID(HashAlgorithmName.SHA1.Name));
 
             return Request.CreateResponse(HttpStatusCode.OK, item.ByteArrayToHexString());
 
+        }
+
+        [ActionName("AddFifty"), HttpGet]
+        public HttpResponseMessage AddFifty([FromUri]string encrypted, [FromUri] string key, [FromUri] string initializationVector)
+        {
+
+            string apiKey = Request.GetApiKey();
+
+            if (string.IsNullOrEmpty(encrypted) || string.IsNullOrEmpty(key) || string.IsNullOrEmpty(initializationVector) || string.IsNullOrEmpty(apiKey))
+
+            {
+                return Request.CreateResponse(HttpStatusCode.BadRequest);
+            }
+
+            var encryptedBytes = Encoding.ASCII.GetBytes(encrypted);
+            var keyBytes = Encoding.ASCII.GetBytes(key);
+            var ivBytes = Encoding.ASCII.GetBytes(initializationVector);
+
+
+            var test = _rsaCrypto.Decrypt(encryptedBytes, false);
+
+
+
+
+
+            return null;
         }
 
     }
