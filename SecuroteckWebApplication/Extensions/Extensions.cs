@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace SecuroteckWebApplication.Extensions
 {
@@ -27,6 +29,34 @@ namespace SecuroteckWebApplication.Extensions
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Converts a byte array to a hexadecimal string
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="remove">True to remove hyphens</param>
+        /// <returns></returns>
+        public static string ByteArrayToHexString(this byte[] data, bool remove)
+        {
+            string result = BitConverter.ToString(data);
+
+            if (remove)
+            {
+                result = result.Replace("-", string.Empty);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Converts a byte array to a hexadecimal string
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static string ByteArrayToHexString(this byte[] data)
+        {
+            return data.ByteArrayToHexString(false);
         }
     }
 }

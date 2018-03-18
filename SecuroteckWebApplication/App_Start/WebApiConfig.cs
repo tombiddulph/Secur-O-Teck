@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Web.Http;
 using SecuroteckWebApplication.Config;
-using SecuroteckWebApplication.Controllers;
 using SecuroteckWebApplication.Controllers.Authorisation;
 using SecuroteckWebApplication.Models;
 using Unity;
@@ -14,20 +11,31 @@ namespace SecuroteckWebApplication
 {
     public static class WebApiConfig
     {
-        // Publically accessible global static variables could go here
+        public static string RsaPublicKey;
+        public static string RsaPrivateKey;
 
         public static void Register(HttpConfiguration config)
         {
 
 
             var containter = new UnityContainer();
+
+            var rsa = new RSACryptoServiceProvider(GetCspParameters);
+            GenerateKeys(rsa);
+            containter.RegisterInstance(rsa);
             containter.RegisterType<IUserRepository, UserRepository>(new HierarchicalLifetimeManager());
+
             config.DependencyResolver = new UnityResolver(containter);
 
             // Web API configuration and services
             GlobalConfiguration.Configuration.MessageHandlers.Add(new ApiAuthorisationHandler(containter.Resolve(typeof(IUserRepository)) as IUserRepository));
 
-     
+
+
+
+
+
+
 
             #region Task 7
             // Configuration for Task 9
@@ -42,5 +50,31 @@ namespace SecuroteckWebApplication
                 defaults: new { id = RouteParameter.Optional }
             );
         }
+
+        private static CspParameters GetCspParameters => new CspParameters
+        {
+            ProviderType = 1,
+            Flags = CspProviderFlags.NoPrompt,
+            KeyNumber = (int)KeyNumber.Exchange
+
+        };
+
+        private static void GenerateKeys(RSACryptoServiceProvider rng)
+        {
+
+
+            try
+            {
+                RsaPublicKey = rng.ToXmlString(false);
+                RsaPrivateKey = rng.ToXmlString(true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+
     }
 }

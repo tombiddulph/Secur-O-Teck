@@ -26,6 +26,8 @@ namespace SecuroteckWebApplication.Models
         public string ApiKey { get; set; }
 
         public string UserName { get; set; }
+
+        public virtual ICollection<Log> Logs { get; set; }
     }
 
     #region Task11?
@@ -35,31 +37,7 @@ namespace SecuroteckWebApplication.Models
     public class UserDatabaseAccess
     {
 
-        public async Task<User> Create(string userName)
-        {
-            if (userName == null)
-            {
-                throw new ArgumentNullException(nameof(userName));
-            }
-
-
-            var user = new User
-            {
-                ApiKey = Guid.NewGuid().ToString(),
-                UserName = userName
-            };
-
-            using (var context = new UserContext())
-            {
-                context.Users.Add(user);
-                await context.SaveChangesAsync();
-            }
-
-
-            return user;
-
-        }
-
+       
         #region Task3 
         // TODO: Make methods which allow us to read from/write to the database 
         #endregion

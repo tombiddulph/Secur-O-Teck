@@ -9,7 +9,7 @@ using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
 {
-    [CustomAuthorise]
+    
     public class TalkBackController : ApiController
     {
 
