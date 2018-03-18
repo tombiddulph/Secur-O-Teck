@@ -4,6 +4,9 @@ using System.Linq;
 using System.Web;
 using System.Web.Http;
 using System.Web.Routing;
+using SecuroteckWebApplication.Models;
+using Unity;
+using Unity.Lifetime;
 
 namespace SecuroteckWebApplication
 {
@@ -11,6 +14,9 @@ namespace SecuroteckWebApplication
     {
         protected void Application_Start()
         {
+
+          
+
             GlobalConfiguration.Configure(WebApiConfig.Register);
         }
     }

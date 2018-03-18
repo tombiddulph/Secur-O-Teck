@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Web.Http;
+using SecuroteckWebApplication.Config;
 using SecuroteckWebApplication.Controllers;
+using SecuroteckWebApplication.Models;
+using Unity;
+using Unity.Lifetime;
 
 namespace SecuroteckWebApplication
 {
@@ -13,6 +17,12 @@ namespace SecuroteckWebApplication
 
         public static void Register(HttpConfiguration config)
         {
+
+
+            var containter = new UnityContainer();
+            containter.RegisterType<IUserRepository, UserRepository>(new HierarchicalLifetimeManager());
+            config.DependencyResolver = new UnityResolver(containter);
+
             // Web API configuration and services
             GlobalConfiguration.Configuration.MessageHandlers.Add(new APIAuthorisationHandler());
 

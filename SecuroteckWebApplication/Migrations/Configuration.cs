@@ -1,11 +1,9 @@
 namespace SecuroteckWebApplication.Migrations
 {
-    using System;
-    using System.Data.Entity;
     using System.Data.Entity.Migrations;
-    using System.Linq;
+    using Models;
 
-    internal sealed class Configuration : DbMigrationsConfiguration<SecuroteckWebApplication.Models.UserContext>
+    internal sealed class Configuration : DbMigrationsConfiguration<UserContext>
     {
         public Configuration()
         {
@@ -14,7 +12,7 @@ namespace SecuroteckWebApplication.Migrations
             ContextKey = "SecuroteckWebApplication.Models.UserContext";
         }
 
-        protected override void Seed(SecuroteckWebApplication.Models.UserContext context)
+        protected override void Seed(UserContext context)
         {
             //  This method will be called after migrating to the latest version.
 
