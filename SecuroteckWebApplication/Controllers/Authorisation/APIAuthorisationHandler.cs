@@ -5,19 +5,58 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using SecuroteckWebApplication.Models;
 
-namespace SecuroteckWebApplication.Controllers
+namespace SecuroteckWebApplication.Controllers.Authorisation
 {
-    public class APIAuthorisationHandler : DelegatingHandler
+    public class ApiAuthorisationHandler : DelegatingHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync (HttpRequestMessage request, CancellationToken cancellationToken)
+
+        private readonly IUserRepository _userRepository;
+
+        public ApiAuthorisationHandler(IUserRepository userRepository)
+        {
+            _userRepository = userRepository;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             #region Task5
             // TODO:  Find if a header ‘ApiKey’ exists, and if it does, check the database to determine if the given API Key is valid
             //        Then authorise the principle on the current thread using a claim, claimidentity and claimsprinciple
             #endregion
+
+            IEnumerable<string> values;
+            if (request.Headers.TryGetValues("ApiKey", out values))
+            {
+                values = values.ToList();
+
+                var item = values.ElementAt(0);
+
+                Guid result;
+                if (Guid.TryParse(item, out result))
+                {
+                    var user = this._userRepository.GetUser(x => x.ApiKey == item);
+                    if (user != null)
+                    {
+                        ClaimsPrincipal current = new ClaimsPrincipal();
+                        current.AddIdentity(new ClaimsIdentity(new[]
+                            {
+                                new Claim(nameof(User.UserName), user.UserName),
+                                new Claim(nameof(User.ApiKey), user.ApiKey)
+                            },
+                            "ApiKey"));
+
+
+                        Thread.CurrentPrincipal = current;
+
+                    }
+
+
+                }
+            }
+
+
             return base.SendAsync(request, cancellationToken);
         }
     }

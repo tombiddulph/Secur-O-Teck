@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Web.Http;
 using SecuroteckWebApplication.Config;
 using SecuroteckWebApplication.Controllers;
+using SecuroteckWebApplication.Controllers.Authorisation;
 using SecuroteckWebApplication.Models;
 using Unity;
 using Unity.Lifetime;
@@ -24,7 +25,9 @@ namespace SecuroteckWebApplication
             config.DependencyResolver = new UnityResolver(containter);
 
             // Web API configuration and services
-            GlobalConfiguration.Configuration.MessageHandlers.Add(new APIAuthorisationHandler());
+            GlobalConfiguration.Configuration.MessageHandlers.Add(new ApiAuthorisationHandler(containter.Resolve(typeof(IUserRepository)) as IUserRepository));
+
+     
 
             #region Task 7
             // Configuration for Task 9

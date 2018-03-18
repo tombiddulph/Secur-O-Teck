@@ -89,9 +89,9 @@ namespace SecuroteckWebApplication.Models
             throw new NotImplementedException();
         }
 
-        public User GetUserById(Guid id)
+        public User GetUser(Func<User, bool> selector)
         {
-            return _context.Users.FirstOrDefault(x => x.ApiKey == id.ToString());
+            return _context.Users.FirstOrDefault(selector);
         }
 
         public User GetUserByUserName(string userName)
@@ -99,10 +99,7 @@ namespace SecuroteckWebApplication.Models
             return _context.Users.FirstOrDefault(x => x.UserName == userName);
         }
 
-        public User GetUser(Func<User, bool> selector)
-        {
-            return _context.Users.FirstOrDefault(selector);
-        }
+      
 
         public bool CheckUser(Func<User, bool> selector)
         {
@@ -170,7 +167,7 @@ namespace SecuroteckWebApplication.Models
         bool CheckUser(Func<User, bool> selector);
         IEnumerable<User> GetUsers();
         bool CheckUser(string username);
-        User GetUserById(Guid id);
+        User GetUser(Func<User, bool> selector);
         User GetUserByUserName(string userName);
         User InsertUser(string userName);
         IEnumerable<User> InsertUsers(IEnumerable<User> users);

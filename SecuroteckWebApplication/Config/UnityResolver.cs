@@ -38,6 +38,19 @@ namespace SecuroteckWebApplication.Config
             }
         }
 
+        public T GetService<T>()
+        {
+            try
+            {
+                return (T)_container.Resolve(typeof(T));
+            }
+            catch (ResolutionFailedException e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
         public IEnumerable<object> GetServices(Type serviceType)
         {
             try

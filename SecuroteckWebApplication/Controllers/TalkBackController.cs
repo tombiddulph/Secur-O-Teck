@@ -4,24 +4,19 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Description;
+using SecuroteckWebApplication.Controllers.Authorisation;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
 {
+    [CustomAuthorise]
     public class TalkBackController : ApiController
     {
+
         [ActionName("Hello")]
         public HttpResponseMessage Get()
         {
-
-            UserRepository repository = new UserRepository(null);
-
-            string userName = "";
-            Guid apikey = Guid.Empty;
-            var test = repository.CheckUser(x => x.UserName == userName && x.ApiKey == apikey.ToString());
-        
             return Request.CreateResponse(HttpStatusCode.OK, "Hello World");
-
         }
 
 

@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
+using SecuroteckWebApplication.Controllers.Authorisation;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
@@ -44,6 +45,7 @@ namespace SecuroteckWebApplication.Controllers
                 "True - User Does Exist! Did you mean to do a POST to create a new user");
         }
 
+        [CustomAuthorise]
         [ActionName("New")]
         public async Task<HttpResponseMessage> Post([FromBody] string userName)
         {
