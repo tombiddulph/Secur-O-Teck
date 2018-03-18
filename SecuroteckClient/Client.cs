@@ -23,7 +23,7 @@ namespace SecuroteckClient
 
         private static Dictionary<string, ParamsFunc<string, string>> functions =
             new Dictionary<string, ParamsFunc<string, string>>();
-       
+
 
         private static Dictionary<string, Action> MethodLookup = new Dictionary<string, Action>
         {
@@ -57,10 +57,7 @@ namespace SecuroteckClient
             Environment.Exit(0);
         }
 
-        private static Dictionary<string, Func<Task>> test = new Dictionary<string, Func<Task>>
-        {
-            {"23", () => TalkBackHello }
-        };
+      
 
         public static async Task ProcessInput(string input, bool first = false)
         {
@@ -93,6 +90,7 @@ namespace SecuroteckClient
                 case "Exit":
                     {
                         Environment.Exit(0);
+                        break;
                     }
                 case "":
                 case null:

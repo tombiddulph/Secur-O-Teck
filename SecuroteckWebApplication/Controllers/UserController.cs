@@ -80,7 +80,6 @@ namespace SecuroteckWebApplication.Controllers
                 var apiKey = values.ToList().FirstOrDefault();
 
                 Guid result;
-
                 if (Guid.TryParse(apiKey, out result))
                 {
                     user = _userRepository.GetUser(x => x.UserName == userName && x.ApiKey == apiKey);
