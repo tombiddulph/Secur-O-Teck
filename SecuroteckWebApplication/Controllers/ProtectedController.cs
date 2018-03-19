@@ -5,8 +5,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web.Http;
 using SecuroteckWebApplication.Controllers.Authorisation;
+using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Extensions;
-using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
 {
@@ -23,9 +23,9 @@ namespace SecuroteckWebApplication.Controllers
         public ProtectedController(RSACryptoServiceProvider rsaCrypto, IUserRepository userRepository)
         {
             _userRepository = userRepository;
-            this._sha1Crypto = new SHA1CryptoServiceProvider();
-            this._sha256Crypto = new SHA256CryptoServiceProvider();
-            this._rsaCrypto = rsaCrypto;
+            _sha1Crypto = new SHA1CryptoServiceProvider();
+            _sha256Crypto = new SHA256CryptoServiceProvider();
+            _rsaCrypto = rsaCrypto;
         }
 
         [ActionName("sha1")]
@@ -112,7 +112,7 @@ namespace SecuroteckWebApplication.Controllers
 
 
 
-            var item = this._rsaCrypto.SignHash(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)), CryptoConfig.MapNameToOID(HashAlgorithmName.SHA1.Name));
+            var item = _rsaCrypto.SignHash(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)), CryptoConfig.MapNameToOID(HashAlgorithmName.SHA1.Name));
 
             return Request.CreateResponse(HttpStatusCode.OK, item.ByteArrayToHexString());
 

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
-using System.Web.Services.Protocols;
 using SecuroteckWebApplication.Controllers.Authorisation;
+using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
@@ -36,7 +35,7 @@ namespace SecuroteckWebApplication.Controllers
 
 
 
-            if (!this._userRepository.CheckUser(x => x.UserName.Equals(userName)))
+            if (!_userRepository.CheckUser(x => x.UserName.Equals(userName)))
             {
                 return Request.CreateResponse(HttpStatusCode.OK,
                     "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
@@ -46,7 +45,13 @@ namespace SecuroteckWebApplication.Controllers
                 "True - User Does Exist! Did you mean to do a POST to create a new user");
         }
 
-        [CustomAuthorise]
+
+
+        /// <summary>
+        /// Creates a new user from the given username
+        /// </summary>
+        /// <param name="userName"></param>
+        /// <returns></returns>
         [ActionName("New")]
         public async Task<HttpResponseMessage> Post([FromBody] string userName)
         {
@@ -58,16 +63,22 @@ namespace SecuroteckWebApplication.Controllers
 
             }
 
-            //TODO check for user existance before adding
+            //TODO check for user existence before adding
 
 
-            var user = this._userRepository.InsertUser(userName);
+            var user = _userRepository.InsertUser(userName);
             await _userRepository.SaveChanges();
 
 
             return Request.CreateResponse(HttpStatusCode.OK, user.ApiKey);
         }
 
+
+        /// <summary>
+        /// Deletes a user by username from the database 
+        /// </summary>
+        /// <param name="userName">The name of the user to delete</param>
+        /// <returns></returns>
         [CustomAuthorise]
         [ActionName("RemoveUser")]
         [HttpDelete]

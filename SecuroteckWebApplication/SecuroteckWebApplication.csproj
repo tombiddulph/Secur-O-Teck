@@ -127,6 +127,8 @@
     <Compile Include="Controllers\ProtectedController.cs" />
     <Compile Include="Controllers\TalkBackController.cs" />
     <Compile Include="Controllers\UserController.cs" />
+    <Compile Include="DataAccess\IUserRepository.cs" />
+    <Compile Include="DataAccess\UserRepository.cs" />
     <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>

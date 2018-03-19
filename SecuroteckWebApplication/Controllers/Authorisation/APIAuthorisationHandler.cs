@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers.Authorisation
@@ -36,7 +37,7 @@ namespace SecuroteckWebApplication.Controllers.Authorisation
                 Guid result;
                 if (Guid.TryParse(item, out result))
                 {
-                    var user = this._userRepository.GetUser(x => x.ApiKey == item);
+                    var user = _userRepository.GetUser(x => x.ApiKey == item);
                     if (user != null)
                     {
                         ClaimsPrincipal current = new ClaimsPrincipal();

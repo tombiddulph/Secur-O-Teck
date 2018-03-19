@@ -66,17 +66,17 @@ namespace SecuroteckWebApplication.Config
 
         public IDependencyScope BeginScope()
         {
-            return new UnityResolver(this._container.CreateChildContainer());
+            return new UnityResolver(_container.CreateChildContainer());
         }
 
         public void Dispose()
         {
-            this.Dispose(true);
+            Dispose(true);
         }
 
         public virtual void Dispose(bool disposing)
         {
-            this._container.Dispose();
+            _container.Dispose();
         }
     }
 }
