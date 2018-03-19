@@ -7,7 +7,7 @@ using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.DataAccess
 {
-    public class UserRepository : IUserRepository, IDisposable
+    public class UserRepository : IUserRepository
     {
         private readonly UserContext _context;
         private bool _disposed;
@@ -29,6 +29,7 @@ namespace SecuroteckWebApplication.DataAccess
 
         public bool CheckUser(string username)
         {
+
             throw new NotImplementedException();
         }
 
@@ -76,6 +77,7 @@ namespace SecuroteckWebApplication.DataAccess
 
         public void DeleteUser(User user)
         {
+            var user2 = _context.Users.Find(user.ApiKey);
             if (CheckUser(x => x == user))
             {
                 _context.Users.Remove(user);

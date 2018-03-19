@@ -105,5 +105,11 @@ namespace SecuroteckWebApplication.Controllers
 
             return Request.CreateResponse(HttpStatusCode.OK, user != null);
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            _userRepository.Dispose();
+            base.Dispose();
+        }
     }
 }

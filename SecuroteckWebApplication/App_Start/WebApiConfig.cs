@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Web.Http;
 using SecuroteckWebApplication.Config;
 using SecuroteckWebApplication.Controllers.Authorisation;
-using SecuroteckWebApplication.Models;
+using SecuroteckWebApplication.DataAccess;
 using Unity;
 using Unity.Lifetime;
 

@@ -28,7 +28,7 @@ namespace SecuroteckWebApplication.Controllers
             _rsaCrypto = rsaCrypto;
         }
 
-        [ActionName("sha1")]
+        [ActionName("sha1"), HttpGet]
 
         public HttpResponseMessage Sha1([FromUri] string message)
         {
@@ -46,7 +46,7 @@ namespace SecuroteckWebApplication.Controllers
 
         }
 
-        [ActionName("sha256")]
+        [ActionName("sha256"), HttpGet]
 
         public HttpResponseMessage Sha256([FromUri] string message)
         {
@@ -142,6 +142,12 @@ namespace SecuroteckWebApplication.Controllers
 
 
             return null;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            this._userRepository.Dispose();
+            base.Dispose(true);
         }
 
     }

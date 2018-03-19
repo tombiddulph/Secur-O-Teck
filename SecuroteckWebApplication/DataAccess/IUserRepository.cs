@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.DataAccess
 {
-    public interface IUserRepository
+    public interface IUserRepository : IDisposable
     {
 
         bool CheckUser(Func<User, bool> selector);

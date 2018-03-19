@@ -1,11 +1,8 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Description;
-using SecuroteckWebApplication.Controllers.Authorisation;
-using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers
 {
@@ -31,5 +28,9 @@ namespace SecuroteckWebApplication.Controllers
                 : Request.CreateResponse(HttpStatusCode.OK, integers.OrderBy(x => x).ToArray());
         }
 
+     
+
     }
+
+
 }
