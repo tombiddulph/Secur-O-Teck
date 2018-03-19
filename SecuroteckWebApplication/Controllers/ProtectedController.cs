@@ -147,7 +147,7 @@ namespace SecuroteckWebApplication.Controllers
         protected override void Dispose(bool disposing)
         {
             this._userRepository.Dispose();
-            base.Dispose(true);
+            base.Dispose(disposing);
         }
 
     }

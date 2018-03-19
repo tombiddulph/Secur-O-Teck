@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Web.Http.Dependencies;
 using Unity;
 using Unity.Exceptions;
@@ -17,6 +19,7 @@ namespace SecuroteckWebApplication.Config
         {
             _container = container;
         }
+
 
 
 
@@ -75,6 +78,7 @@ namespace SecuroteckWebApplication.Config
         public virtual void Dispose(bool disposing)
         {
             _container.Dispose();
+           GC.SuppressFinalize(this);
         }
     }
 }

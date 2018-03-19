@@ -10,7 +10,7 @@ namespace SecuroteckWebApplication.DataAccess
     public class UserRepository : IUserRepository
     {
         private readonly UserContext _context;
-        private bool _disposed;
+        private bool _disposed = false;
 
         /// <summary>
         /// Initializes a new <see cref="UserRepository"/> instance
@@ -19,7 +19,6 @@ namespace SecuroteckWebApplication.DataAccess
         public UserRepository(UserContext context)
         {
             _context = context;
-            _disposed = false;
         }
 
         /// <summary>
@@ -48,7 +47,16 @@ namespace SecuroteckWebApplication.DataAccess
         /// </summary>
         /// <param name="selector"></param>
         /// <returns></returns>
-        public bool CheckUser(Func<User, bool> selector) => _context.Users.FirstOrDefault(selector) != null;
+        public bool CheckUser(Func<User, bool> selector)
+        {
+
+
+
+
+            return _context.Users.Any(selector);
+
+
+        }
 
         /// <summary>
         /// Inserts a new user into the database
@@ -77,10 +85,11 @@ namespace SecuroteckWebApplication.DataAccess
 
         public void DeleteUser(User user)
         {
-            var user2 = _context.Users.Find(user.ApiKey);
-            if (CheckUser(x => x == user))
+            User test = _context.Users.Find(user.ApiKey);
+            if (test != null)
             {
-                _context.Users.Remove(user);
+                _context.Users.Remove(test);
+                
             }
         }
 

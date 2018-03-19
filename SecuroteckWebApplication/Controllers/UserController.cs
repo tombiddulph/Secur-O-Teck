@@ -22,7 +22,7 @@ namespace SecuroteckWebApplication.Controllers
         }
 
 
-        [ActionName("New")]
+        [ActionName("New"), HttpGet]
         public HttpResponseMessage Get([FromUri]string userName)
         {
 
@@ -32,17 +32,18 @@ namespace SecuroteckWebApplication.Controllers
                     "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
             }
 
+       
 
 
 
-            if (!_userRepository.CheckUser(x => x.UserName.Equals(userName)))
+            if (!_userRepository.CheckUser(x => x.UserName == userName))
             {
                 return Request.CreateResponse(HttpStatusCode.OK,
                     "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
             }
 
             return Request.CreateResponse(HttpStatusCode.OK,
-                "True - User Does Exist! Did you mean to do a POST to create a new user");
+                "True - User Does Exist! Did you mean to do a POST to create a new user?");
         }
 
 
@@ -52,7 +53,7 @@ namespace SecuroteckWebApplication.Controllers
         /// </summary>
         /// <param name="userName"></param>
         /// <returns></returns>
-        [ActionName("New")]
+        [ActionName("New"), HttpPost]
         public async Task<HttpResponseMessage> Post([FromBody] string userName)
         {
 
@@ -70,7 +71,7 @@ namespace SecuroteckWebApplication.Controllers
             await _userRepository.SaveChanges();
 
 
-            return Request.CreateResponse(HttpStatusCode.OK, user.ApiKey);
+            return Request.CreateResponse(HttpStatusCode.OK, user);
         }
 
 
@@ -108,8 +109,9 @@ namespace SecuroteckWebApplication.Controllers
 
         protected override void Dispose(bool disposing)
         {
+        
             _userRepository.Dispose();
-            base.Dispose();
+            base.Dispose(disposing);
         }
     }
 }
