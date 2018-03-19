@@ -91,7 +91,7 @@ namespace SecuroteckWebApplication.Controllers
             return Request.CreateResponse(HttpStatusCode.OK, _rsaCrypto.ToXmlString(false));
         }
 
-        [ActionName("Sign")]
+        [ActionName("Sign"), HttpGet]
         public HttpResponseMessage Sign([FromUri] string message)
         {
             string key = Request.GetApiKey();

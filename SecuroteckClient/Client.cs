@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using Newtonsoft.Json;
 
 namespace SecuroteckClient
@@ -35,7 +37,7 @@ namespace SecuroteckClient
 
         private static string ApiKey = string.Empty;
         private static string UserName = string.Empty;
-
+        private static string ServerPublicKey;
         private static User Current = null;
 
 
@@ -52,9 +54,13 @@ namespace SecuroteckClient
             {"Protected Hello", new Func<string[], Task>(ProtectedHello)},
             {"Protected SHA1", new Func<string[], Task>(ProtectedSha1)},
             {"Protected SHA256", new Func<string[], Task>(ProtectedSha256)},
+            {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
+            {"Protected Sign", new Func<string[], Task>(ProtectedSignMessage) },
             {"Exit", new Action(() => OnCancel(null, null))}
 
         };
+
+
 
 
         static async Task Main(string[] args)
@@ -200,10 +206,14 @@ namespace SecuroteckClient
             string username = args[0].Replace("User Get", string.Empty).Trim();
 
 
-            _client.GetAsync($"{Endpoint}{UserController}new?username={username}").ContinueWith(task =>
+            _client.GetAsync($"{Endpoint}{UserController}new?username={username}").ContinueWith(response =>
                {
-                   task.Result.Content.ReadAsStringAsync().ContinueWith(
-                       y => { Console.WriteLine(y.Result); }).Wait();
+                   response.Result.Content.ReadAsStringAsync().ContinueWith(
+                       message =>
+                       {
+                           Console.WriteLine(message.Result);
+
+                       }).Wait();
                }).Wait();
         }
 
@@ -400,6 +410,93 @@ namespace SecuroteckClient
             }).Wait(); ;
         }
 
+        private async static Task ProtectedGetPublicKey()
+        {
+            if (ApiKey == null)
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}getpublickey"));
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            _client.SendAsync(request).ContinueWith(task =>
+            {
+                if (task.Result.StatusCode == HttpStatusCode.OK)
+                {
+                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
+                    {
+                        ServerPublicKey = message.Result;
+                        Console.WriteLine("Got Public Key");
+                    }).Wait();
+                }
+                else
+                {
+                    Console.WriteLine("Couldn’t Get the Public Key");
+                }
+
+            }).Wait(); ;
+        }
+
+        private static async Task ProtectedSignMessage(params string[] args)
+        {
+            if (ApiKey == null)
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+
+            if (ServerPublicKey == null)
+            {
+                Console.WriteLine("Client doesn't yet have the public key");
+                return;
+            }
+
+
+            var message = args[0].Replace("Protected Sign", string.Empty).Trim();
+
+            if (string.IsNullOrEmpty(message))
+            {
+                //TODO handle this
+            }
+
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sign?message={message}"));
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            _client.SendAsync(request).ContinueWith(task =>
+            {
+                if (task.Result.StatusCode == HttpStatusCode.OK)
+                {
+                    task.Result.Content.ReadAsStringAsync().ContinueWith(result =>
+                    {
+
+
+                        var provider = new RSACryptoServiceProvider();
+                        provider.FromXmlString(ServerPublicKey);
+                        var decryptedBytes = provider.DecryptValue(Encoding.ASCII.GetBytes(result.Result));
+                        var msg = BitConverter.ToString(decryptedBytes);
+
+                        Console.WriteLine("Got Public Key");
+                    }).Wait();
+                }
+                else
+                {
+                    Console.WriteLine("Couldn’t Get the Public Key");
+                }
+
+            }).Wait(); ;
+
+        }
+
     }
+
+
+ 
+
     #endregion
 }
