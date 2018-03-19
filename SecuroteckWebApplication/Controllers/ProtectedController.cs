@@ -38,11 +38,7 @@ namespace SecuroteckWebApplication.Controllers
             }
 
 
-
-            var returnMessage = BitConverter.ToString(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message))).Replace("-", string.Empty);
-
-
-            return Request.CreateResponse(HttpStatusCode.OK, returnMessage);
+            return Request.CreateResponse(HttpStatusCode.OK, _sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
 
         }
 
@@ -55,12 +51,7 @@ namespace SecuroteckWebApplication.Controllers
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
             }
 
-
-
-            var returnMessage = _sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString();
-
-
-            return Request.CreateResponse(HttpStatusCode.OK, returnMessage);
+            return Request.CreateResponse(HttpStatusCode.OK, _sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
 
         }
 

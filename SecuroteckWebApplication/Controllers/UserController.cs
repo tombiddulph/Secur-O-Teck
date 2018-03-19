@@ -83,7 +83,7 @@ namespace SecuroteckWebApplication.Controllers
         [CustomAuthorise]
         [ActionName("RemoveUser")]
         [HttpDelete]
-        public async Task<HttpResponseMessage> DeleteUser([FromBody] string userName)
+        public async Task<HttpResponseMessage> DeleteUser([FromUri] string userName)
         {
             User user = null;
             IEnumerable<string> values;

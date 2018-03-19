@@ -28,6 +28,7 @@ namespace SecuroteckClient
         private const string Endpoint = "http://localhost:24702/api/";
         private const string TalkBack = "talkback/";
         private const string UserController = "user/";
+        private const string ProtectedController = "protected/";
         private static readonly HttpClient _client = new HttpClient();
         private static readonly string SaveLocation = $"{Directory.GetCurrentDirectory()}/savedata.json";
 
@@ -150,8 +151,17 @@ namespace SecuroteckClient
 
         private static async Task TalkBackHello()
         {
-            var message = await _client.GetAsync($"{Endpoint}{TalkBack}hello");
-            Console.WriteLine(await message.Content.ReadAsStringAsync());
+            var request = _client.GetAsync($"{Endpoint}{TalkBack}hello");
+
+            request.ContinueWith(task =>
+            {
+                task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
+                {
+                    Console.WriteLine(message.Result);
+                }).Wait();
+            }).Wait();
+
+
         }
 
         private static async Task TalkBackSort(params string[] args)
@@ -270,10 +280,9 @@ namespace SecuroteckClient
                 return;
             }
 
-            var content = new ByteArrayContent(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(UserName)));
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            content.Headers.Add("ApiKey", ApiKey);
-            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser"));
+
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={UserName}"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
             _client.SendAsync(request).ContinueWith(response =>
@@ -296,16 +305,99 @@ namespace SecuroteckClient
         private static async Task ProtectedHello(params string[] args)
         {
 
+            if (Current == null && (ApiKey == null && UserName == null))
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}hello"));
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            _client.SendAsync(request).ContinueWith(task =>
+            {
+                if (task.Result.StatusCode == HttpStatusCode.OK)
+                {
+                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
+                    {
+                        Console.WriteLine(message.Result);
+                    }).Wait();
+                }
+                else
+                {
+                    //TODO unauthorized
+                }
+
+            }).Wait(); ;
+
+
         }
 
         private static async Task ProtectedSha1(params string[] args)
         {
+            if (ApiKey == null)
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+            var text = args[0];
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={text}"));
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            _client.SendAsync(request).ContinueWith(task =>
+            {
+                if (task.Result.StatusCode == HttpStatusCode.OK)
+                {
+                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
+                    {
+                        Console.WriteLine(message.Result);
+                    }).Wait();
+                }
+                else
+                {
+                    //TODO unauthorized
+                }
+
+            }).Wait(); ;
 
         }
 
         private static async Task ProtectedSha256(params string[] args)
         {
+            if (ApiKey == null)
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
 
+            var text = args[0];
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={text}"));
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            _client.SendAsync(request).ContinueWith(task =>
+            {
+                if (task.Result.StatusCode == HttpStatusCode.OK)
+                {
+                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
+                    {
+                        Console.WriteLine(message.Result);
+                    }).Wait();
+                }
+                else
+                {
+                    //TODO unauthorized
+                }
+
+            }).Wait(); ;
         }
 
     }
