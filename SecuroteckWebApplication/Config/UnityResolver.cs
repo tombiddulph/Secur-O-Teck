@@ -13,11 +13,16 @@ namespace SecuroteckWebApplication.Config
     {
 
         private readonly IUnityContainer _container;
+        private readonly HashSet<Type> excludedTypes = new HashSet<Type>
+        {
+            
+        };
 
 
         public UnityResolver(IUnityContainer container)
         {
             _container = container;
+
         }
 
 
@@ -28,7 +33,13 @@ namespace SecuroteckWebApplication.Config
         {
             try
             {
-                return _container.Resolve(serviceType);
+                if (this._container.IsRegistered(serviceType))
+                {
+                    return _container.Resolve(serviceType);
+                }
+
+                return null;
+
             }
             catch (ResolutionFailedException e)
             {

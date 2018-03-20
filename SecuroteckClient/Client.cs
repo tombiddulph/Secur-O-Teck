@@ -56,6 +56,7 @@ namespace SecuroteckClient
             {"Protected SHA256", new Func<string[], Task>(ProtectedSha256)},
             {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
             {"Protected Sign", new Func<string[], Task>(ProtectedSignMessage) },
+            {"Protected AddFifty", new Func<string[], Task>(ProtectedAddFifty) },
             {"Exit", new Action(() => OnCancel(null, null))}
 
         };
@@ -86,8 +87,11 @@ namespace SecuroteckClient
 
             while (true)
             {
+               
                 Console.Write("What would you like to do next? ");
-                await ProcessInput(Console.ReadLine());
+                string text = Console.ReadLine();
+                Console.Clear();
+                await ProcessInput(text);
 
             }
         }
@@ -111,10 +115,7 @@ namespace SecuroteckClient
 
         public static async Task ProcessInput(string input, bool first = false)
         {
-            if (!first)
-            {
-                Console.Clear();
-            }
+            
 
 
 
@@ -127,17 +128,15 @@ namespace SecuroteckClient
             }
 
             var item = MethodLookup[key];
+            Console.WriteLine("...please wait...");
 
             if (item.Method.GetParameters().Any())
             {
-                if (item is Func<string[], Task> test)
+                if (item is Func<string[], Task> func)
                 {
-                    Console.WriteLine("Please Wait...");
-                    await test(new[] { input });
+                    
+                    await func(new[] { input });
                 }
-
-
-
             }
             else
             {
@@ -146,6 +145,8 @@ namespace SecuroteckClient
                     await task();
                 }
             }
+
+           
 
         }
 
@@ -301,7 +302,7 @@ namespace SecuroteckClient
         private static async Task ProtectedHello(params string[] args)
         {
 
-            if (Current == null && (ApiKey == null && UserName == null))
+            if (Current == null && string.IsNullOrEmpty(ApiKey) && string.IsNullOrEmpty(UserName))
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
@@ -390,7 +391,7 @@ namespace SecuroteckClient
 
         }
 
-        private async static Task ProtectedGetPublicKey()
+        private static async Task ProtectedGetPublicKey()
         {
             if (ApiKey == null)
             {
@@ -462,7 +463,7 @@ namespace SecuroteckClient
                 };
 
                 provider.FromXmlString(ServerPublicKey);
-               
+
 
 
                 var tempSplit = encrypted.Split('-');
@@ -488,6 +489,99 @@ namespace SecuroteckClient
             }
 
 
+        }
+
+        private static async Task ProtectedAddFifty(params string[] args)
+        {
+            if (ApiKey == null)
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+
+            if (ServerPublicKey == null)
+            {
+                Console.WriteLine("Client doesn't yet have the public key");
+                return;
+            }
+
+
+            var message = args[0].Replace("Protected AddFifty", string.Empty).Trim();
+
+            if (string.IsNullOrEmpty(message))
+            {
+                //TODO handle this
+            }
+
+            int num;
+            if (!int.TryParse(message, out num))
+            {
+                //TODO handle this
+            }
+
+
+            var provider = new RSACryptoServiceProvider
+            {
+                PersistKeyInCsp = false,
+                KeySize = 2048
+            };
+
+            provider.FromXmlString(ServerPublicKey);
+
+
+            var encryptedInt = BitConverter.ToString(provider.Encrypt(BitConverter.GetBytes(num), true));
+
+            var aes = new AesManaged();
+
+            aes.GenerateKey();
+            aes.GenerateIV();
+            var key = BitConverter.ToString(provider.Encrypt(aes.Key, true));
+            var iv = BitConverter.ToString(provider.Encrypt(aes.IV, true));
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"{Endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
+            request.Headers.Add(nameof(ApiKey), ApiKey);
+
+            var response = await _client.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var encrypted = (await response.Content.ReadAsStringAsync());
+
+                var decryptor = aes.CreateDecryptor();
+                var encryptedBytes = FromHexString(encrypted);
+
+                var decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+
+
+                try
+                {
+                    var result = BitConverter.ToInt32(decryptedBytes, 0);
+                    Console.WriteLine(result);
+                }
+                catch (Exception e)
+                {
+                    if (e is ArgumentOutOfRangeException || e is ArgumentException)
+                    {
+                        Console.WriteLine("An error occurred!");
+                    }
+                }
+            }
+        }
+
+        private static byte[] FromHexString(string input)
+        {
+            var split = input.Split('-');
+            var result = new byte[split.Length];
+            for (int i = 0; i < split.Length; i++)
+            {
+                result[i] = Convert.ToByte(split[i], 16);
+            }
+
+            return result;
         }
 
     }

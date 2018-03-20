@@ -57,7 +57,7 @@ namespace SecuroteckWebApplication.Controllers
 
             return Request.CreateOkStringResponse(_sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message))
                 .ByteArrayToHexString(true));
-            //return Request.CreateResponse(HttpStatusCode.OK, _sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
+
 
         }
 
@@ -115,19 +115,6 @@ namespace SecuroteckWebApplication.Controllers
 
             var hash = _sha1Crypto.ComputeHash(Encoding.UTF8.GetBytes(message));
 
-            var rsaFormatter = new RSAPKCS1SignatureFormatter(_rsaCrypto);
-            rsaFormatter.SetHashAlgorithm("SHA1");
-            var sha1 = new SHA1Managed();
-            var value = rsaFormatter.CreateSignature(sha1.ComputeHash(new UnicodeEncoding().GetBytes(message)));
-
-
-
-            var rsa = new RSACryptoServiceProvider
-            {
-                PersistKeyInCsp = false,
-                KeySize = 2048
-            };
-
 
             var item = _rsaCrypto.SignHash(hash, CryptoConfig.MapNameToOID("SHA1"));
 
@@ -140,29 +127,42 @@ namespace SecuroteckWebApplication.Controllers
         }
 
         [ActionName("AddFifty"), HttpGet]
-        public HttpResponseMessage AddFifty([FromUri]string encrypted, [FromUri] string key, [FromUri] string initializationVector)
+        public HttpResponseMessage AddFifty([FromUri]string encryptedInteger, [FromUri] string encryptedsymkey, [FromUri] string encryptedIV)
         {
 
             string apiKey = Request.GetApiKey();
 
-            if (string.IsNullOrEmpty(encrypted) || string.IsNullOrEmpty(key) || string.IsNullOrEmpty(initializationVector) || string.IsNullOrEmpty(apiKey))
+            if (string.IsNullOrEmpty(encryptedInteger) || string.IsNullOrEmpty(encryptedsymkey) || string.IsNullOrEmpty(encryptedIV) || string.IsNullOrEmpty(apiKey))
 
             {
                 return Request.CreateResponse(HttpStatusCode.BadRequest);
             }
 
-            var encryptedBytes = Encoding.ASCII.GetBytes(encrypted);
-            var keyBytes = Encoding.ASCII.GetBytes(key);
-            var ivBytes = Encoding.ASCII.GetBytes(initializationVector);
+            var encryptedBytes = FromHexString(encryptedInteger);
+            var keyBytes = _rsaCrypto.Decrypt(FromHexString(encryptedsymkey), true);
+            var ivBytes = _rsaCrypto.Decrypt(FromHexString(encryptedIV), true);
 
 
-            var test = _rsaCrypto.Decrypt(encryptedBytes, false);
+            var value = (BitConverter.ToInt32(_rsaCrypto.Decrypt(encryptedBytes, true), 0) + 50);
+
+            var aes = new AesManaged
+            {
+                Key = keyBytes,
+                IV = ivBytes
+            };
+            var encryptor = aes.CreateEncryptor();
+
+            var valueBytes = BitConverter.GetBytes(value);
+            var resultBytes = encryptor.TransformFinalBlock(valueBytes, 0, valueBytes.Length);
 
 
 
+            return Request.CreateOkStringResponse(BitConverter.ToString(resultBytes));
+            bool test = ((int.MaxValue - value) + 50) > int.MaxValue;
+            
 
 
-            return null;
+            return Request.CreateResponse(HttpStatusCode.OK); ;
         }
 
         protected override void Dispose(bool disposing)
@@ -171,5 +171,17 @@ namespace SecuroteckWebApplication.Controllers
             base.Dispose(disposing);
         }
 
+
+        private byte[] FromHexString(string input)
+        {
+            var split = input.Split('-');
+            var result = new byte[split.Length];
+            for (int i = 0; i < split.Length; i++)
+            {
+                result[i] = Convert.ToByte(split[i], 16);
+            }
+
+            return result;
+        }
     }
 }

@@ -1,0 +1,36 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Unity;
+
+namespace SecuroteckWebApplication.Controllers.Authorisation
+{
+    public class DelegatingHandlerProxy<T> : DelegatingHandler where T : DelegatingHandler
+    {
+        private readonly UnityContainer _containter;
+
+        public DelegatingHandlerProxy(UnityContainer containter)
+        {
+            this._containter = containter;
+        }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            request.GetDependencyScope();
+            var handler = this._containter.Resolve<T>();
+            handler.InnerHandler = this.InnerHandler;
+
+            var invoked = new HttpMessageInvoker(handler);
+
+            var response = await invoked.SendAsync(request, cancellationToken);
+
+            return response;
+        }
+
+    }
+}
