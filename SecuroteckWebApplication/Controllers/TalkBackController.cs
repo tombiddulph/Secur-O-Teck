@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -24,22 +25,25 @@ namespace SecuroteckWebApplication.Controllers
 
 
         [ActionName("Sort")]
-        [ResponseType(typeof(int[]))]
-        public HttpResponseMessage Get([FromUri] int[] integers)
+     
+        public HttpResponseMessage Get([FromUri] string[] integers)
         {
 
-            int[] result;
-
-            if (integers.Length > 1)
+            var result = new List<int>();
+            foreach (var integer in integers)
             {
-                result = integers.OrderBy(x => x).ToArray();
-            }
-            else
-            {
-                result = new int[0];
+                int converted;
+                if (int.TryParse(integer, out converted))
+                {
+                    result.Add(converted);
+                }
+                else
+                {
+                    return Request.CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
+                }
             }
 
-            return Request.CreateResponse(HttpStatusCode.OK, result);
+            return Request.CreateResponse(HttpStatusCode.OK, Json(result));
         }
 
 

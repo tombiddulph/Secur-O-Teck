@@ -38,8 +38,10 @@ namespace SecuroteckWebApplication.Controllers
             }
 
 
-            return Request.CreateResponse(HttpStatusCode.OK, _sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
+            //return Request.CreateResponse(HttpStatusCode.OK, _sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
 
+            return Request.CreateOkStringResponse(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message))
+                .ByteArrayToHexString(true));
         }
 
         [ActionName("sha256"), HttpGet]
@@ -51,7 +53,11 @@ namespace SecuroteckWebApplication.Controllers
                 return Request.CreateResponse(HttpStatusCode.BadRequest, "Bad Request");
             }
 
-            return Request.CreateResponse(HttpStatusCode.OK, _sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
+
+
+            return Request.CreateOkStringResponse(_sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message))
+                .ByteArrayToHexString(true));
+            //return Request.CreateResponse(HttpStatusCode.OK, _sha256Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)).ByteArrayToHexString(true));
 
         }
 
@@ -88,7 +94,10 @@ namespace SecuroteckWebApplication.Controllers
             }
 
 
-            return Request.CreateResponse(HttpStatusCode.OK, _rsaCrypto.ToXmlString(false));
+
+
+
+            return Request.CreateOkStringResponse(_rsaCrypto.ToXmlString(false));
         }
 
         [ActionName("Sign"), HttpGet]
@@ -103,9 +112,30 @@ namespace SecuroteckWebApplication.Controllers
 
 
 
-            var item = _rsaCrypto.SignHash(_sha1Crypto.ComputeHash(Encoding.ASCII.GetBytes(message)), CryptoConfig.MapNameToOID(HashAlgorithmName.SHA1.Name));
 
-            return Request.CreateResponse(HttpStatusCode.OK, item.ByteArrayToHexString());
+            var hash = _sha1Crypto.ComputeHash(Encoding.UTF8.GetBytes(message));
+
+            var rsaFormatter = new RSAPKCS1SignatureFormatter(_rsaCrypto);
+            rsaFormatter.SetHashAlgorithm("SHA1");
+            var sha1 = new SHA1Managed();
+            var value = rsaFormatter.CreateSignature(sha1.ComputeHash(new UnicodeEncoding().GetBytes(message)));
+
+
+
+            var rsa = new RSACryptoServiceProvider
+            {
+                PersistKeyInCsp = false,
+                KeySize = 2048
+            };
+
+
+            var item = _rsaCrypto.SignHash(hash, CryptoConfig.MapNameToOID("SHA1"));
+
+
+
+
+
+            return Request.CreateOkStringResponse(BitConverter.ToString(item));
 
         }
 

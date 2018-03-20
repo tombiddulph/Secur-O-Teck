@@ -157,15 +157,10 @@ namespace SecuroteckClient
 
         private static async Task TalkBackHello()
         {
-            var request = _client.GetAsync($"{Endpoint}{TalkBack}hello");
+            var request = await _client.GetAsync($"{Endpoint}{TalkBack}hello");
 
-            request.ContinueWith(task =>
-            {
-                task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                {
-                    Console.WriteLine(message.Result);
-                }).Wait();
-            }).Wait();
+            string result = await request.Content.ReadAsStringAsync();
+            Console.WriteLine(result);
 
 
         }
@@ -176,23 +171,28 @@ namespace SecuroteckClient
             string param = args[0];
             param = param.Replace("TalkBack Sort", string.Empty).Replace("[", string.Empty).Replace("]", string.Empty);
 
-            var split = param.Split(',');
-
             var sb = new StringBuilder();
-            foreach (var s in split.Take(param.Length - 1))
+            if (!string.IsNullOrEmpty(param))
             {
-                sb.Append($"integers={s}&");
+
+                var split = param.Split(',');
+
+                if (split.Length > 1)
+                {
+                    foreach (var s in split.Take(split.Length - 1))
+                    {
+                        sb.Append($"integers={s}&");
+                    }
+                }
+
+                sb.Append($"integers={split.Last()}");
             }
 
-            sb.Append($"integers={split.Last()}");
 
-            Task<HttpResponseMessage> result = _client.GetAsync($"{Endpoint}{TalkBack}sort?{sb.ToString()}");
-            string message = string.Empty;
-            result.ContinueWith(x =>
-            {
-                Task<string> test = result.Result.Content.ReadAsStringAsync();
-                test.ContinueWith(y => { Console.WriteLine(y.Result); }).Wait();
-            }).Wait();
+            var test = await _client.GetAsync($"{Endpoint}{TalkBack}sort?{sb}");
+            Console.WriteLine(await test.Content.ReadAsStringAsync());
+
+
 
 
 
@@ -206,15 +206,8 @@ namespace SecuroteckClient
             string username = args[0].Replace("User Get", string.Empty).Trim();
 
 
-            _client.GetAsync($"{Endpoint}{UserController}new?username={username}").ContinueWith(response =>
-               {
-                   response.Result.Content.ReadAsStringAsync().ContinueWith(
-                       message =>
-                       {
-                           Console.WriteLine(message.Result);
-
-                       }).Wait();
-               }).Wait();
+            var response = await _client.GetAsync($"{Endpoint}{UserController}new?username={username}");
+            Console.WriteLine(await response.Content.ReadAsStringAsync());
         }
 
         private static async Task UserPost(params string[] args)
@@ -226,28 +219,21 @@ namespace SecuroteckClient
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
 
-            _client.PostAsync($"{Endpoint}{UserController}new", content).ContinueWith(task =>
+
+            var response = await _client.PostAsync($"{Endpoint}{UserController}new", content);
+
+            if (response.StatusCode == HttpStatusCode.OK)
             {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(
-                        key =>
-                        {
-                            Console.WriteLine("Got API Key");
-                            var result = JsonConvert.DeserializeObject<User>(key.Result);
 
-                            ApiKey = result.ApiKey.ToString();
-                            UserName = result.UserName;
-                        }).Wait();
-
-                }
-                else
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(
-                        y => { Console.WriteLine(y.Result); }).Wait();
-                }
-
-            }).Wait();
+                var result = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync());
+                Console.WriteLine("Got API Key");
+                ApiKey = result.ApiKey.ToString();
+                UserName = result.UserName;
+            }
+            else
+            {
+                Console.WriteLine(await response.Content.ReadAsStringAsync());
+            }
         }
 
         private static async Task UserSet(params string[] args)
@@ -295,20 +281,20 @@ namespace SecuroteckClient
             var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={UserName}"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(response =>
+            var response = await _client.SendAsync(request);
+
+            var outcome = await response.Content.ReadAsStringAsync();
+
+            if (bool.TryParse(outcome, out var result))
             {
-                response.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                {
-                    if (bool.TryParse(message.Result, out bool result))
-                    {
-                        Console.WriteLine(result);
-                    }
-                    else
-                    {
-                        Console.WriteLine("False");
-                    }
-                }).Wait();
-            }).Wait();
+                Console.WriteLine(result);
+            }
+            else
+            {
+                Console.WriteLine("False");
+            }
+
+
 
         }
 
@@ -326,21 +312,20 @@ namespace SecuroteckClient
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}hello"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(task =>
-            {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                    {
-                        Console.WriteLine(message.Result);
-                    }).Wait();
-                }
-                else
-                {
-                    //TODO unauthorized
-                }
 
-            }).Wait(); ;
+            var response = await _client.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(result);
+
+            }
+            else
+            {
+                //TODO unauthorized
+            }
+
 
 
         }
@@ -360,21 +345,18 @@ namespace SecuroteckClient
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={text}"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(task =>
-            {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                    {
-                        Console.WriteLine(message.Result);
-                    }).Wait();
-                }
-                else
-                {
-                    //TODO unauthorized
-                }
+            var response = await _client.SendAsync(request);
 
-            }).Wait(); ;
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                Console.WriteLine(await response.Content.ReadAsStringAsync());
+            }
+            else
+            {
+                //TODO unauthorized
+            }
+
+
 
         }
 
@@ -393,21 +375,19 @@ namespace SecuroteckClient
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={text}"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(task =>
-            {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                    {
-                        Console.WriteLine(message.Result);
-                    }).Wait();
-                }
-                else
-                {
-                    //TODO unauthorized
-                }
 
-            }).Wait(); ;
+            var response = await _client.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                Console.WriteLine(await response.Content.ReadAsStringAsync());
+            }
+            else
+            {
+                //TODO unauthorized
+            }
+
+
         }
 
         private async static Task ProtectedGetPublicKey()
@@ -421,22 +401,21 @@ namespace SecuroteckClient
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}getpublickey"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(task =>
-            {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
-                {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(message =>
-                    {
-                        ServerPublicKey = message.Result;
-                        Console.WriteLine("Got Public Key");
-                    }).Wait();
-                }
-                else
-                {
-                    Console.WriteLine("Couldn’t Get the Public Key");
-                }
 
-            }).Wait(); ;
+            var response = await _client.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
+            {
+                ServerPublicKey = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("Got Public Key");
+            }
+            else
+            {
+                Console.WriteLine("Couldn’t Get the Public Key");
+                //TODO unauthorized
+            }
+
+
         }
 
         private static async Task ProtectedSignMessage(params string[] args)
@@ -465,38 +444,56 @@ namespace SecuroteckClient
 
 
 
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sign?message={message}"));
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                ($"{Endpoint}{ProtectedController}sign?message={message}"));
             request.Headers.Add(nameof(ApiKey), ApiKey);
 
-            _client.SendAsync(request).ContinueWith(task =>
+
+
+            var response = await _client.SendAsync(request);
+
+            if (response.StatusCode == HttpStatusCode.OK)
             {
-                if (task.Result.StatusCode == HttpStatusCode.OK)
+                var encrypted = (await response.Content.ReadAsStringAsync());
+                var provider = new RSACryptoServiceProvider()
                 {
-                    task.Result.Content.ReadAsStringAsync().ContinueWith(result =>
-                    {
+                    PersistKeyInCsp = false,
+                    KeySize = 2048
+                };
+
+                provider.FromXmlString(ServerPublicKey);
+               
 
 
-                        var provider = new RSACryptoServiceProvider();
-                        provider.FromXmlString(ServerPublicKey);
-                        var decryptedBytes = provider.DecryptValue(Encoding.ASCII.GetBytes(result.Result));
-                        var msg = BitConverter.ToString(decryptedBytes);
+                var tempSplit = encrypted.Split('-');
+                var data = new byte[tempSplit.Length];
 
-                        Console.WriteLine("Got Public Key");
-                    }).Wait();
+                for (var index = 0; index < tempSplit.Length; index++)
+                {
+                    data[index] = Convert.ToByte(tempSplit[index], 16);
+                }
+
+
+                var result = provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)), CryptoConfig.MapNameToOID("SHA1"), data);
+
+
+                if (result)
+                {
+                    Console.WriteLine("Message was successfully signed");
                 }
                 else
                 {
-                    Console.WriteLine("Couldn’t Get the Public Key");
+                    Console.WriteLine("Message was not successfully signed");
                 }
+            }
 
-            }).Wait(); ;
 
         }
 
     }
 
 
- 
+
 
     #endregion
 }

@@ -11,18 +11,21 @@ namespace SecuroteckWebApplication
 {
     public static class WebApiConfig
     {
-        public static string RsaPublicKey;
-        public static string RsaPrivateKey;
+
 
         public static void Register(HttpConfiguration config)
         {
 
 
             var containter = new UnityContainer();
-
-            var rsa = new RSACryptoServiceProvider(GetCspParameters);
-            GenerateKeys(rsa);
+            var rsa = new RSACryptoServiceProvider
+            {
+                PersistKeyInCsp = false,
+                KeySize = 2048
+            };
+            rsa.FromXmlString(rsa.ToXmlString(true));
             containter.RegisterInstance(rsa);
+
             containter.RegisterType<IUserRepository, UserRepository>(new HierarchicalLifetimeManager());
 
             config.DependencyResolver = new UnityResolver(containter);
@@ -51,29 +54,8 @@ namespace SecuroteckWebApplication
             );
         }
 
-        private static CspParameters GetCspParameters => new CspParameters
-        {
-            ProviderType = 1,
-            Flags = CspProviderFlags.NoPrompt,
-            KeyNumber = (int)KeyNumber.Exchange
-
-        };
-
-        private static void GenerateKeys(RSACryptoServiceProvider rng)
-        {
 
 
-            try
-            {
-                RsaPublicKey = rng.ToXmlString(false);
-                RsaPrivateKey = rng.ToXmlString(true);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
-        }
 
 
     }

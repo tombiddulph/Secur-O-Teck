@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -57,6 +58,13 @@ namespace SecuroteckWebApplication.Extensions
         public static string ByteArrayToHexString(this byte[] data)
         {
             return data.ByteArrayToHexString(false);
+        }
+
+        public static HttpResponseMessage CreateOkStringResponse(this HttpRequestMessage request, string data)
+        {
+            var response = request.CreateResponse(HttpStatusCode.OK);
+            response.Content = new StringContent(data, Encoding.UTF8, "application/json");
+            return response;
         }
     }
 }
