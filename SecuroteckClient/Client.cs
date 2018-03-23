@@ -80,6 +80,7 @@ namespace SecuroteckClient
 
             Console.CancelKeyPress += OnCancel;
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
+            
 
 
 
@@ -116,9 +117,6 @@ namespace SecuroteckClient
         public static async Task ProcessInput(string input, bool first = false)
         {
             
-
-
-
             var key = MethodLookup.Keys.FirstOrDefault(x => x.StartsWith(input) || input.Contains(x));
 
             if (string.IsNullOrEmpty(key))
@@ -130,20 +128,28 @@ namespace SecuroteckClient
             var item = MethodLookup[key];
             Console.WriteLine("...please wait...");
 
-            if (item.Method.GetParameters().Any())
+            try
             {
-                if (item is Func<string[], Task> func)
+                if (item.Method.GetParameters().Any())
                 {
+                    if (item is Func<string[], Task> func)
+                    {
                     
-                    await func(new[] { input });
+                        await func(new[] { input });
+                    }
+                }
+                else
+                {
+                    if (item is Func<Task> task)
+                    {
+                        await task();
+                    }
                 }
             }
-            else
+            catch (Exception e)
             {
-                if (item is Func<Task> task)
-                {
-                    await task();
-                }
+                Console.WriteLine(e);
+                
             }
 
            
@@ -151,10 +157,7 @@ namespace SecuroteckClient
         }
 
 
-        public static void TaskCompleted(IAsyncResult result)
-        {
-
-        }
+    
 
         private static async Task TalkBackHello()
         {
@@ -190,8 +193,8 @@ namespace SecuroteckClient
             }
 
 
-            var test = await _client.GetAsync($"{Endpoint}{TalkBack}sort?{sb}");
-            Console.WriteLine(await test.Content.ReadAsStringAsync());
+            var response = await _client.GetAsync($"{Endpoint}{TalkBack}sort?{sb}");
+            Console.WriteLine(await response.Content.ReadAsStringAsync());
 
 
 
@@ -456,7 +459,7 @@ namespace SecuroteckClient
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var encrypted = (await response.Content.ReadAsStringAsync());
-                var provider = new RSACryptoServiceProvider()
+                var provider = new RSACryptoServiceProvider
                 {
                     PersistKeyInCsp = false,
                     KeySize = 2048
@@ -466,26 +469,15 @@ namespace SecuroteckClient
 
 
 
-                var tempSplit = encrypted.Split('-');
-                var data = new byte[tempSplit.Length];
+               
 
-                for (var index = 0; index < tempSplit.Length; index++)
-                {
-                    data[index] = Convert.ToByte(tempSplit[index], 16);
-                }
-
-
-                var result = provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)), CryptoConfig.MapNameToOID("SHA1"), data);
+                var result =
+                    provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)),
+                        CryptoConfig.MapNameToOID("SHA1"),
+                        encrypted.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray());
 
 
-                if (result)
-                {
-                    Console.WriteLine("Message was successfully signed");
-                }
-                else
-                {
-                    Console.WriteLine("Message was not successfully signed");
-                }
+                Console.WriteLine(result ? "Message was successfully signed" : "Message was not successfully signed");
             }
 
 
@@ -574,14 +566,7 @@ namespace SecuroteckClient
 
         private static byte[] FromHexString(string input)
         {
-            var split = input.Split('-');
-            var result = new byte[split.Length];
-            for (int i = 0; i < split.Length; i++)
-            {
-                result[i] = Convert.ToByte(split[i], 16);
-            }
-
-            return result;
+            return input.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray();
         }
 
     }

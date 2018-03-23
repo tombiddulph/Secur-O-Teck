@@ -135,16 +135,13 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201803181930292_User class created.cs" />
-    <Compile Include="Migrations\201803181930292_User class created.Designer.cs">
-      <DependentUpon>201803181930292_User class created.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201803182310599_added logs.cs" />
-    <Compile Include="Migrations\201803182310599_added logs.Designer.cs">
-      <DependentUpon>201803182310599_added logs.cs</DependentUpon>
+    <Compile Include="Migrations\201803232228198_initalReset.cs" />
+    <Compile Include="Migrations\201803232228198_initalReset.Designer.cs">
+      <DependentUpon>201803232228198_initalReset.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\Log.cs" />
+    <Compile Include="Models\LogArchive.cs" />
     <Compile Include="Models\User.cs" />
     <Compile Include="Models\UserContext.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -163,11 +160,8 @@
     <Folder Include="App_Data\" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201803181930292_User class created.resx">
-      <DependentUpon>201803181930292_User class created.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201803182310599_added logs.resx">
-      <DependentUpon>201803182310599_added logs.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\201803232228198_initalReset.resx">
+      <DependentUpon>201803232228198_initalReset.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

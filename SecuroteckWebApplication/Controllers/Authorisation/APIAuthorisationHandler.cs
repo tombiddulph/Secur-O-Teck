@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using SecuroteckWebApplication.DataAccess;
+using SecuroteckWebApplication.Extensions;
 using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Controllers.Authorisation
@@ -40,6 +41,23 @@ namespace SecuroteckWebApplication.Controllers.Authorisation
                     var user = _userRepository.GetUser(x => x.ApiKey == item);
                     if (user != null)
                     {
+
+                        //user.Logs.Add(request.AuthorizationLog());
+
+
+                        if (user.Logs == null)
+                        {
+                            user.Logs = new List<Log>
+                            {
+                                request.AuthorizationLog()
+                            };
+                        }
+                        else
+                        {
+                            user.Logs.Add(request.AuthorizationLog());
+                        }
+
+                        _userRepository.SaveChanges();
                         ClaimsPrincipal current = new ClaimsPrincipal();
                         current.AddIdentity(new ClaimsIdentity(new[]
                             {

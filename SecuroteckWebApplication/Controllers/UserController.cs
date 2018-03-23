@@ -32,7 +32,7 @@ namespace SecuroteckWebApplication.Controllers
                     "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
             }
 
-       
+
 
 
 
@@ -98,7 +98,7 @@ namespace SecuroteckWebApplication.Controllers
 
                     if (user != null)
                     {
-                        _userRepository.DeleteUser(user);
+                        await _userRepository.DeleteUser(user);
                         await _userRepository.SaveChanges();
                     }
                 }
@@ -109,7 +109,7 @@ namespace SecuroteckWebApplication.Controllers
 
         protected override void Dispose(bool disposing)
         {
-        
+
             _userRepository.Dispose();
             base.Dispose(disposing);
         }

@@ -7,13 +7,13 @@ namespace SecuroteckWebApplication.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.2.0-61023")]
-    public sealed partial class addedlogs : IMigrationMetadata
+    public sealed partial class initalReset : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(addedlogs));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(initalReset));
         
         string IMigrationMetadata.Id
         {
-            get { return "201803182310599_added logs"; }
+            get { return "201803232228198_initalReset"; }
         }
         
         string IMigrationMetadata.Source

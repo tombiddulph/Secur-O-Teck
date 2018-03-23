@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using SecuroteckWebApplication.Models;
 
 namespace SecuroteckWebApplication.Extensions
 {
@@ -65,6 +66,15 @@ namespace SecuroteckWebApplication.Extensions
             var response = request.CreateResponse(HttpStatusCode.OK);
             response.Content = new StringContent(data, Encoding.UTF8, "application/json");
             return response;
+        }
+
+        public static Log AuthorizationLog(this HttpRequestMessage request)
+        {
+            return new Log
+            {
+                LogDateTime = DateTime.Now,
+                LogString = $"User requested {request.RequestUri.PathAndQuery}"
+            };
         }
     }
 }

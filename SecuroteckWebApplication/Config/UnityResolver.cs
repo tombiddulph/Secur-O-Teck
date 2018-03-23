@@ -15,7 +15,7 @@ namespace SecuroteckWebApplication.Config
         private readonly IUnityContainer _container;
         private readonly HashSet<Type> excludedTypes = new HashSet<Type>
         {
-            
+
         };
 
 
@@ -33,13 +33,7 @@ namespace SecuroteckWebApplication.Config
         {
             try
             {
-                if (this._container.IsRegistered(serviceType))
-                {
-                    return _container.Resolve(serviceType);
-                }
-
-                return null;
-
+                return _container.Resolve(serviceType);
             }
             catch (ResolutionFailedException e)
             {
@@ -89,7 +83,7 @@ namespace SecuroteckWebApplication.Config
         public virtual void Dispose(bool disposing)
         {
             _container.Dispose();
-           GC.SuppressFinalize(this);
+            GC.SuppressFinalize(this);
         }
     }
 }

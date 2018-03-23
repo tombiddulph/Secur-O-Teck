@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -158,11 +160,8 @@ namespace SecuroteckWebApplication.Controllers
 
 
             return Request.CreateOkStringResponse(BitConverter.ToString(resultBytes));
-            bool test = ((int.MaxValue - value) + 50) > int.MaxValue;
-            
-
-
-            return Request.CreateResponse(HttpStatusCode.OK); ;
+       
+          
         }
 
         protected override void Dispose(bool disposing)
@@ -172,16 +171,7 @@ namespace SecuroteckWebApplication.Controllers
         }
 
 
-        private byte[] FromHexString(string input)
-        {
-            var split = input.Split('-');
-            var result = new byte[split.Length];
-            for (int i = 0; i < split.Length; i++)
-            {
-                result[i] = Convert.ToByte(split[i], 16);
-            }
+        private static byte[] FromHexString(string input) => input.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray();
 
-            return result;
-        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Entity.Migrations;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using SecuroteckWebApplication.Models;
@@ -16,21 +17,13 @@ namespace SecuroteckWebApplication.DataAccess
         /// Initializes a new <see cref="UserRepository"/> instance
         /// </summary>
         /// <param name="context"></param>
-        public UserRepository(UserContext context)
-        {
-            _context = context;
-        }
+        public UserRepository(UserContext context) => _context = context;
+
 
         /// <summary>
         /// Gets a list of all the users
         /// </summary>
         public IEnumerable<User> GetUsers() => _context.Users.ToList();
-
-        public bool CheckUser(string username)
-        {
-
-            throw new NotImplementedException();
-        }
 
         /// <summary>
         /// Gets a user by user name and/or ApiKey
@@ -47,16 +40,8 @@ namespace SecuroteckWebApplication.DataAccess
         /// </summary>
         /// <param name="selector"></param>
         /// <returns></returns>
-        public bool CheckUser(Func<User, bool> selector)
-        {
+        public bool CheckUser(Func<User, bool> selector) => _context.Users.Any(selector);
 
-
-
-
-            return _context.Users.Any(selector);
-
-
-        }
 
         /// <summary>
         /// Inserts a new user into the database
@@ -83,14 +68,21 @@ namespace SecuroteckWebApplication.DataAccess
 
         }
 
-        public void DeleteUser(User user)
+        public async Task DeleteUser(User user)
         {
-            User test = _context.Users.Find(user.ApiKey);
-            if (test != null)
+
+            this._context.LogArchive.AddRange(user.Logs.Select(log => new LogArchive
             {
-                _context.Users.Remove(test);
-                
-            }
+                LogString = log.LogString,
+                LogId = log.LogId,
+                LogDateTime = log.LogDateTime,
+                Name = user.UserName,
+                ApiKey = user.ApiKey
+            }));
+
+
+            _context.Logs.RemoveRange(user.Logs);
+            _context.Users.Remove(user);
         }
 
         public void UpdateUser(User user) => _context.Users.AddOrUpdate(user);
