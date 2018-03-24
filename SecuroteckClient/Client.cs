@@ -66,7 +66,7 @@ namespace SecuroteckClient
         private static readonly string SaveLocation = $"{Directory.GetCurrentDirectory()}/savedata.json";
 
 
-        private static string ApiKey = string.Empty;
+        private static string _apiKey = string.Empty;
         private static string UserName = string.Empty;
         private static string ServerPublicKey;
         private static User Current = null;
@@ -78,17 +78,17 @@ namespace SecuroteckClient
         private static readonly Dictionary<string, Delegate> MethodLookup = new Dictionary<string, Delegate>
         {
             {"TalkBack Hello", new Func<Task>(TalkBackHello)},
-            {"TalkBack Sort [", new Func<string[], Task>(TalkBackSort)},
-            {"User Get", new Func<string[], Task>(UserGet)},
-            {"User Post", new Func<string[], Task>(UserPost)},
+            {"TalkBack Sort [", new Func<string, Task>(TalkBackSort)},
+            {"User Get", new Func<string, Task>(UserGet)},
+            {"User Post", new Func<string, Task>(UserPost)},
             {"User Set", new Func<string[], Task>(UserSet)},
             {"User Delete", new Func<Task>(UserDelete)},
-            {"Protected Hello", new Func<string[], Task>(ProtectedHello)},
-            {"Protected SHA1", new Func<string[], Task>(ProtectedSha1)},
-            {"Protected SHA256", new Func<string[], Task>(ProtectedSha256)},
+            {"Protected Hello", new Func<Task>(ProtectedHello)},
+            {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
+            {"Protected SHA256", new Func<string, Task>(ProtectedSha256)},
             {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
-            {"Protected Sign", new Func<string[], Task>(ProtectedSignMessage) },
-            {"Protected AddFifty", new Func<string[], Task>(ProtectedAddFifty) },
+            {"Protected Sign", new Func<string, Task>(ProtectedSignMessage) },
+            {"Protected AddFifty", new Func<string, Task>(ProtectedAddFifty) },
             {"Exit", new Action(() => OnCancel(null, null))}
 
         };
@@ -96,17 +96,17 @@ namespace SecuroteckClient
         private static readonly Dictionary<string, Delegate> MethodLookupRegex = new Dictionary<string, Delegate>
         {
             {"TalkBack Hello", new Func<Task>(TalkBackHello)},
-            {@"TalkBack Sort \[[0-9]+(,[0-9]+)*\]", new Func<string[], Task>(TalkBackSort)},
-            {"User Get", new Func<string[], Task>(UserGet)},
-            {"User Post", new Func<string[], Task>(UserPost)},
+            {@"TalkBack Sort \[[0-9]+(,[0-9]+)*\]", new Func<string, Task>(TalkBackSort)},
+            {"User Get", new Func<string, Task>(UserGet)},
+            {"User Post", new Func<string, Task>(UserPost)},
             {"User Set", new Func<string[], Task>(UserSet)},
             {"User Delete", new Func<Task>(UserDelete)},
-            {"Protected Hello", new Func<string[], Task>(ProtectedHello)},
-            {"Protected SHA1", new Func<string[], Task>(ProtectedSha1)},
-            {"Protected SHA256", new Func<string[], Task>(ProtectedSha256)},
+            {"Protected Hello", new Func< Task>(ProtectedHello)},
+            {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
+            {"Protected SHA256", new Func<string, Task>(ProtectedSha256)},
             {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
-            {"Protected Sign", new Func<string[], Task>(ProtectedSignMessage) },
-            {"Protected AddFifty", new Func<string[], Task>(ProtectedAddFifty) },
+            {"Protected Sign", new Func<string, Task>(ProtectedSignMessage) },
+            {"Protected AddFifty", new Func<string, Task>(ProtectedAddFifty) },
             {"Exit", new Action(() => OnCancel(null, null))}
 
         };
@@ -135,7 +135,7 @@ namespace SecuroteckClient
 
 
 
-            await ProcessInput(Console.ReadLine(), true);
+            await ProcessInput(Console.ReadLine());
 
             while (true)
             {
@@ -169,18 +169,13 @@ namespace SecuroteckClient
 
 
 
-        public static async Task ProcessInput(string input, bool first = false)
+        public static async Task ProcessInput(string input)
         {
 
 
             if (null == SynchronizationContext.Current)
             {
                 SynchronizationContext.SetSynchronizationContext(synchronizationContext);
-
-                if (null == SynchronizationContext.Current)
-                {
-                    Debugger.Break();
-                }
             }
 
 
@@ -198,30 +193,27 @@ namespace SecuroteckClient
 
             var item = MethodLookup[key];
             Console.WriteLine("...please wait...");
-
+            input = input.Replace(key, string.Empty);
             try
             {
 
-
-                if (item.Method.GetParameters().Any())
+                switch (item)
                 {
-                    if (item is Func<string[], Task> func)
-                    {
+                    case Func<string[], Task> withParams:
+                        await withParams(new[] { input });
+                        break;
+                    case Func<Task> withoutParams:
+                        await withoutParams();
+                        break;
+                    default:
+                        throw new InvalidOperationException();
+                }
 
-                        await func(new[] { input });
-                    }
-                }
-                else
-                {
-                    if (item is Func<Task> task)
-                    {
-                        await task();
-                    }
-                }
+
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine($"An error occurred:\n{ e.Message}");
 
             }
 
@@ -242,11 +234,11 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task TalkBackSort(params string[] args)
+        private static async Task TalkBackSort(string param)
         {
 
-            string param = args[0];
-            param = param.Replace("TalkBack Sort", string.Empty).Replace("[", string.Empty).Replace("]", string.Empty);
+
+            param = param.Replace("[", string.Empty).Replace("]", string.Empty);
 
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(param))
@@ -278,18 +270,20 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task UserGet(params string[] args)
+        private static async Task UserGet(string username)
         {
-            string username = args[0].Replace("User Get", string.Empty).Trim();
 
 
             var response = await _client.GetAsync($"{Endpoint}{UserController}new?username={username}");
             Console.WriteLine(await response.Content.ReadAsStringAsync());
         }
 
-        private static async Task UserPost(params string[] args)
+        private static async Task UserPost(string username)
         {
-            string username = args[0].Replace("User Post", string.Empty).Trim();
+            if (string.IsNullOrEmpty(username))
+            {
+
+            }
 
 
             var content = new ByteArrayContent(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(username)));
@@ -304,7 +298,7 @@ namespace SecuroteckClient
 
                 var result = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync());
                 Console.WriteLine("Got API Key");
-                ApiKey = result.ApiKey.ToString();
+                _apiKey = result.ApiKey.ToString();
                 UserName = result.UserName;
             }
             else
@@ -347,7 +341,7 @@ namespace SecuroteckClient
 
         private static async Task UserDelete()
         {
-            if (Current == null && (ApiKey == null && UserName == null))
+            if (Current == null && (_apiKey == null && UserName == null))
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
@@ -356,7 +350,7 @@ namespace SecuroteckClient
 
 
             var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={UserName}"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
             var response = await _client.SendAsync(request);
 
@@ -375,10 +369,10 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task ProtectedHello(params string[] args)
+        private static async Task ProtectedHello()
         {
 
-            if (Current == null && string.IsNullOrEmpty(ApiKey) && string.IsNullOrEmpty(UserName))
+            if (Current == null && string.IsNullOrEmpty(_apiKey) && string.IsNullOrEmpty(UserName))
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
@@ -387,7 +381,7 @@ namespace SecuroteckClient
 
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}hello"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
 
             var response = await _client.SendAsync(request);
@@ -407,20 +401,20 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task ProtectedSha1(params string[] args)
+        private static async Task ProtectedSha1(string text)
         {
-            if (ApiKey == null)
+            if (_apiKey == null)
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
             }
 
-            var text = args[0];
+
 
 
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={text}"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
             var response = await _client.SendAsync(request);
 
@@ -437,20 +431,20 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task ProtectedSha256(params string[] args)
+        private static async Task ProtectedSha256(string text)
         {
-            if (ApiKey == null)
+            if (_apiKey == null)
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
             }
 
-            var text = args[0];
+
 
 
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={text}"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
 
             var response = await _client.SendAsync(request);
@@ -469,14 +463,14 @@ namespace SecuroteckClient
 
         private static async Task ProtectedGetPublicKey()
         {
-            if (ApiKey == null)
+            if (_apiKey == null)
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
             }
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}getpublickey"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
 
             var response = await _client.SendAsync(request);
@@ -495,9 +489,9 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task ProtectedSignMessage(params string[] args)
+        private static async Task ProtectedSignMessage(string message)
         {
-            if (ApiKey == null)
+            if (_apiKey == null)
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
@@ -511,7 +505,7 @@ namespace SecuroteckClient
             }
 
 
-            var message = args[0].Replace("Protected Sign", string.Empty).Trim();
+
 
             if (string.IsNullOrEmpty(message))
             {
@@ -523,7 +517,7 @@ namespace SecuroteckClient
 
             var request = new HttpRequestMessage(HttpMethod.Get,
                 ($"{Endpoint}{ProtectedController}sign?message={message}"));
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
 
 
@@ -556,9 +550,9 @@ namespace SecuroteckClient
 
         }
 
-        private static async Task ProtectedAddFifty(params string[] args)
+        private static async Task ProtectedAddFifty(string message)
         {
-            if (ApiKey == null)
+            if (_apiKey == null)
             {
                 Console.WriteLine("You need to do a User Post or User Set first");
                 return;
@@ -572,7 +566,7 @@ namespace SecuroteckClient
             }
 
 
-            var message = args[0].Replace("Protected AddFifty", string.Empty).Trim();
+
 
             if (string.IsNullOrEmpty(message))
             {
@@ -608,7 +602,7 @@ namespace SecuroteckClient
 
             var request = new HttpRequestMessage(HttpMethod.Get,
                 $"{Endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
-            request.Headers.Add(nameof(ApiKey), ApiKey);
+            request.Headers.Add(nameof(_apiKey), _apiKey);
 
             var response = await _client.SendAsync(request);
 
