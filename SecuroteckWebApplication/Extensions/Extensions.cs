@@ -76,5 +76,14 @@ namespace SecuroteckWebApplication.Extensions
                 LogString = $"User requested {request.RequestUri.PathAndQuery}"
             };
         }
+
+        public static void AuthorizationLog(this HttpRequestMessage request, User user)
+        {
+            user.Logs.Add(new Log
+            {
+                LogDateTime = DateTime.Now,
+                LogString = $"User requested {request.RequestUri.PathAndQuery}"
+            });
+        }
     }
 }

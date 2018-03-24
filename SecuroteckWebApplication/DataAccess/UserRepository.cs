@@ -17,7 +17,10 @@ namespace SecuroteckWebApplication.DataAccess
         /// Initializes a new <see cref="UserRepository"/> instance
         /// </summary>
         /// <param name="context"></param>
-        public UserRepository(UserContext context) => _context = context;
+        public UserRepository(UserContext context)
+        {
+            _context = context;
+        }
 
 
         /// <summary>
@@ -59,13 +62,6 @@ namespace SecuroteckWebApplication.DataAccess
             _context.Users.Add(user);
 
             return user;
-        }
-
-        public IEnumerable<User> InsertUsers(IEnumerable<User> users)
-        {
-            throw new NotImplementedException();
-
-
         }
 
         public async Task DeleteUser(User user)

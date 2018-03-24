@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,11 +10,41 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace SecuroteckClient
 {
 
+    internal class AsyncSynchronizationContext : SynchronizationContext
+    {
+        public override void Send(SendOrPostCallback postback, object state)
+        {
+            try
+            {
+                postback(state);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occurred, error message: ");
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        public override void Post(SendOrPostCallback postback, object state)
+        {
+            try
+            {
+                postback(state);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occurred, error message: ");
+                Console.WriteLine(e.Message);
+            }
+        }
+    }
 
 
     internal class User
@@ -40,6 +71,7 @@ namespace SecuroteckClient
         private static string ServerPublicKey;
         private static User Current = null;
 
+        private static AsyncSynchronizationContext synchronizationContext;
 
 
 
@@ -61,11 +93,30 @@ namespace SecuroteckClient
 
         };
 
+        private static readonly Dictionary<string, Delegate> MethodLookupRegex = new Dictionary<string, Delegate>
+        {
+            {"TalkBack Hello", new Func<Task>(TalkBackHello)},
+            {@"TalkBack Sort \[[0-9]+(,[0-9]+)*\]", new Func<string[], Task>(TalkBackSort)},
+            {"User Get", new Func<string[], Task>(UserGet)},
+            {"User Post", new Func<string[], Task>(UserPost)},
+            {"User Set", new Func<string[], Task>(UserSet)},
+            {"User Delete", new Func<Task>(UserDelete)},
+            {"Protected Hello", new Func<string[], Task>(ProtectedHello)},
+            {"Protected SHA1", new Func<string[], Task>(ProtectedSha1)},
+            {"Protected SHA256", new Func<string[], Task>(ProtectedSha256)},
+            {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
+            {"Protected Sign", new Func<string[], Task>(ProtectedSignMessage) },
+            {"Protected AddFifty", new Func<string[], Task>(ProtectedAddFifty) },
+            {"Exit", new Action(() => OnCancel(null, null))}
+
+        };
 
 
 
         static async Task Main(string[] args)
         {
+
+
 
             //_client.DefaultRequestHeaders.Add("Content-Type", new[] { "application/json" });
 
@@ -80,7 +131,7 @@ namespace SecuroteckClient
 
             Console.CancelKeyPress += OnCancel;
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
-            
+            synchronizationContext = new AsyncSynchronizationContext();
 
 
 
@@ -88,7 +139,7 @@ namespace SecuroteckClient
 
             while (true)
             {
-               
+
                 Console.Write("What would you like to do next? ");
                 string text = Console.ReadLine();
                 Console.Clear();
@@ -99,6 +150,10 @@ namespace SecuroteckClient
 
         private static void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
         {
+            if (e.IsTerminating)
+            {
+                Console.WriteLine("terminating :(");
+            }
             Console.WriteLine("An unhandled exception occured ");
             Console.WriteLine(e.ExceptionObject.ToString());
             Console.WriteLine("\n\n\n\nPress any key to continue");
@@ -116,7 +171,23 @@ namespace SecuroteckClient
 
         public static async Task ProcessInput(string input, bool first = false)
         {
-            
+
+
+            if (null == SynchronizationContext.Current)
+            {
+                SynchronizationContext.SetSynchronizationContext(synchronizationContext);
+
+                if (null == SynchronizationContext.Current)
+                {
+                    Debugger.Break();
+                }
+            }
+
+
+            var results = MethodLookupRegex
+                .Where(result => Regex.Match(input, result.Key, RegexOptions.Singleline).Success)
+                .Select(result => result.Value).FirstOrDefault();
+
             var key = MethodLookup.Keys.FirstOrDefault(x => x.StartsWith(input) || input.Contains(x));
 
             if (string.IsNullOrEmpty(key))
@@ -130,11 +201,13 @@ namespace SecuroteckClient
 
             try
             {
+
+
                 if (item.Method.GetParameters().Any())
                 {
                     if (item is Func<string[], Task> func)
                     {
-                    
+
                         await func(new[] { input });
                     }
                 }
@@ -149,15 +222,15 @@ namespace SecuroteckClient
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                
+
             }
 
-           
+
 
         }
 
 
-    
+
 
         private static async Task TalkBackHello()
         {
@@ -469,7 +542,7 @@ namespace SecuroteckClient
 
 
 
-               
+
 
                 var result =
                     provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)),

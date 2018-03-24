@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using SecuroteckWebApplication.Extensions;
 using Unity;
 
 namespace SecuroteckWebApplication.Controllers.Authorisation
@@ -18,14 +20,23 @@ namespace SecuroteckWebApplication.Controllers.Authorisation
             this._containter = containter;
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
-            CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+
         {
+
+            Trace.WriteLine(await request.Content.ReadAsStringAsync());
             request.GetDependencyScope();
             var handler = this._containter.Resolve<T>();
             handler.InnerHandler = this.InnerHandler;
 
             var invoked = new HttpMessageInvoker(handler);
+
+
+            var key = request.GetApiKey();
+            if (!string.IsNullOrEmpty(key))
+            {
+                Trace.WriteLine(key);
+            }
 
             var response = await invoked.SendAsync(request, cancellationToken);
 

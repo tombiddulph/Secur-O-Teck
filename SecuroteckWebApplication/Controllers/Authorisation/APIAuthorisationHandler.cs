@@ -45,17 +45,10 @@ namespace SecuroteckWebApplication.Controllers.Authorisation
                         //user.Logs.Add(request.AuthorizationLog());
 
 
-                        if (user.Logs == null)
-                        {
-                            user.Logs = new List<Log>
-                            {
-                                request.AuthorizationLog()
-                            };
-                        }
-                        else
-                        {
-                            user.Logs.Add(request.AuthorizationLog());
-                        }
+                        user.Logs.Add(request.AuthorizationLog());
+
+
+                        request.AuthorizationLog(user);
 
                         _userRepository.SaveChanges();
                         ClaimsPrincipal current = new ClaimsPrincipal();

@@ -15,7 +15,6 @@ namespace SecuroteckWebApplication.DataAccess
         User GetUser(Func<User, bool> selector);
         User GetUserByUserName(string userName);
         User InsertUser(string userName);
-        IEnumerable<User> InsertUsers(IEnumerable<User> users);
         Task DeleteUser(User user);
         void UpdateUser(User user);
         Task SaveChanges();
