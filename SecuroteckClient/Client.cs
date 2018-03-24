@@ -81,7 +81,7 @@ namespace SecuroteckClient
             {"TalkBack Sort [", new Func<string, Task>(TalkBackSort)},
             {"User Get", new Func<string, Task>(UserGet)},
             {"User Post", new Func<string, Task>(UserPost)},
-            {"User Set", new Func<string[], Task>(UserSet)},
+            {"User Set", new Func<string, Task>(UserSet)},
             {"User Delete", new Func<Task>(UserDelete)},
             {"Protected Hello", new Func<Task>(ProtectedHello)},
             {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
@@ -99,7 +99,7 @@ namespace SecuroteckClient
             {@"TalkBack Sort \[[0-9]+(,[0-9]+)*\]", new Func<string, Task>(TalkBackSort)},
             {"User Get", new Func<string, Task>(UserGet)},
             {"User Post", new Func<string, Task>(UserPost)},
-            {"User Set", new Func<string[], Task>(UserSet)},
+            {"User Set", new Func<string, Task>(UserSet)},
             {"User Delete", new Func<Task>(UserDelete)},
             {"Protected Hello", new Func< Task>(ProtectedHello)},
             {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
@@ -197,17 +197,13 @@ namespace SecuroteckClient
             try
             {
 
-                switch (item)
+                if (!item.Method.GetParameters().Any())
                 {
-                    case Func<string[], Task> withParams:
-                        await withParams(new[] { input });
-                        break;
-                    case Func<Task> withoutParams:
-                        await withoutParams();
-                        break;
-                    default:
-                        throw new InvalidOperationException();
+                    input = null;
                 }
+
+
+                await (Task)item.DynamicInvoke(input);
 
 
             }
@@ -307,21 +303,26 @@ namespace SecuroteckClient
             }
         }
 
-        private static async Task UserSet(params string[] args)
+        private static async Task UserSet(string args)
         {
-            string[] parameters = args[0].Replace("User Set", string.Empty).Split(' ');
 
+            string[] split = args.Split(' ');
 
-            if (string.IsNullOrEmpty(parameters[0]))
+            if (split.Length != 2)
+            {
+
+            }
+
+            if (string.IsNullOrEmpty(split[0]))
             {
                 //TODO ask john what to do
             }
 
-            if (Guid.TryParse(parameters[1], out var apiKey))
+            if (Guid.TryParse(split[1], out var apiKey))
             {
                 try
                 {
-                    Current = new User { ApiKey = apiKey, UserName = parameters[0] };
+                    Current = new User { ApiKey = apiKey, UserName = split[0] };
                     File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(Current));
                     Console.WriteLine("Stored");
                 }

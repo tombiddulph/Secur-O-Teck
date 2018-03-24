@@ -120,7 +120,7 @@ namespace SecuroteckWebApplication.Controllers
 
             var item = _rsaCrypto.SignHash(hash, CryptoConfig.MapNameToOID("SHA1"));
 
-            RSACng
+
 
 
 
