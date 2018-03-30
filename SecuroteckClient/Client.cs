@@ -46,6 +46,27 @@ namespace SecuroteckClient
         }
     }
 
+    internal class DateTimeSolution
+    {
+        public void PrintDateTimes()
+        {
+            string date = "29/02";
+            int startYear = 2016;
+
+            List<string> dates = new List<string>();
+
+         var n = Enumerable.Range(0, 50).Select(x =>
+            {
+                if (DateTime.TryParse($"{date}/{startYear + x}", out var result) &&
+                    result.DayOfWeek == DayOfWeek.Friday || result.DayOfWeek == DayOfWeek.Saturday ||
+                    result.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    return result.ToShortDateString();
+                }
+                return null;
+            }).Where(x => x != null);
+        }
+    }
 
     internal class User
     {
@@ -77,19 +98,19 @@ namespace SecuroteckClient
 
         private static readonly Dictionary<string, Delegate> MethodLookup = new Dictionary<string, Delegate>
         {
-            {"TalkBack Hello", new Func<Task>(TalkBackHello)},
-            {"TalkBack Sort [", new Func<string, Task>(TalkBackSort)},
-            {"User Get", new Func<string, Task>(UserGet)},
-            {"User Post", new Func<string, Task>(UserPost)},
-            {"User Set", new Func<string, Task>(UserSet)},
-            {"User Delete", new Func<Task>(UserDelete)},
-            {"Protected Hello", new Func<Task>(ProtectedHello)},
-            {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
-            {"Protected SHA256", new Func<string, Task>(ProtectedSha256)},
-            {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
-            {"Protected Sign", new Func<string, Task>(ProtectedSignMessage) },
-            {"Protected AddFifty", new Func<string, Task>(ProtectedAddFifty) },
-            {"Exit", new Action(() => OnCancel(null, null))}
+            {"TalkBack Hello", new Func<Task<string>>(TalkBackHello)},
+            {"TalkBack Sort [", new Func<string, Task<string>>(TalkBackSort)},
+            {"User Get", new Func<string, Task<string>>(UserGet)},
+            {"User Post", new Func<string, Task<string>>(UserPost)},
+            {"User Set", new Func<string, Task<string>>(UserSet)},
+            {"User Delete", new Func<Task<string>>(UserDelete)},
+            {"Protected Hello", new Func<Task<string>>(ProtectedHello)},
+            {"Protected SHA1", new Func<string, Task<string>>(ProtectedSha1)},
+            {"Protected SHA256", new Func<string, Task<string>>(ProtectedSha256)},
+            {"Protected Get PublicKey", new Func<Task<string>>(ProtectedGetPublicKey) },
+            {"Protected Sign", new Func<string, Task<string>>(ProtectedSignMessage) },
+            {"Protected AddFifty", new Func<string, Task<string>>(ProtectedAddFifty) },
+            {"Exit", new Action(() => Environment.Exit(0))}
 
         };
 
@@ -116,9 +137,11 @@ namespace SecuroteckClient
         static async Task Main(string[] args)
         {
 
+            var d = new DateTimeSolution();
+            d.PrintDateTimes();
 
-
-            //_client.DefaultRequestHeaders.Add("Content-Type", new[] { "application/json" });
+            _client.DefaultRequestHeaders.Add("Content-Type", "application/json");
+            _client.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
 
             if (File.Exists(SaveLocation))
             {
@@ -203,8 +226,12 @@ namespace SecuroteckClient
                 }
 
 
-                await (Task)item.DynamicInvoke(input);
+                string result = await (Task<string>)item.DynamicInvoke(input);
 
+                if (!string.IsNullOrEmpty(result))
+                {
+                    Console.WriteLine(result);
+                }
 
             }
             catch (Exception e)
@@ -220,17 +247,14 @@ namespace SecuroteckClient
 
 
 
-        private static async Task TalkBackHello()
+        private static async Task<string> TalkBackHello()
         {
             var request = await _client.GetAsync($"{Endpoint}{TalkBack}hello");
 
-            string result = await request.Content.ReadAsStringAsync();
-            Console.WriteLine(result);
-
-
+            return await request.Content.ReadAsStringAsync();
         }
 
-        private static async Task TalkBackSort(string param)
+        private static async Task<string> TalkBackSort(string param)
         {
 
 
@@ -255,30 +279,26 @@ namespace SecuroteckClient
 
 
             var response = await _client.GetAsync($"{Endpoint}{TalkBack}sort?{sb}");
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
-
-
-
-
-
-
-
-
+            return await response.Content.ReadAsStringAsync();
         }
 
-        private static async Task UserGet(string username)
-        {
-
-
-            var response = await _client.GetAsync($"{Endpoint}{UserController}new?username={username}");
-            Console.WriteLine(await response.Content.ReadAsStringAsync());
-        }
-
-        private static async Task UserPost(string username)
+        private static async Task<string> UserGet(string username)
         {
             if (string.IsNullOrEmpty(username))
             {
+                //TODO ask john again
+            }
 
+            var response = await _client.GetAsync($"{Endpoint}{UserController}new?username={username}");
+
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        private static async Task<string> UserPost(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                //TODO ask john again
             }
 
 
@@ -288,22 +308,25 @@ namespace SecuroteckClient
 
 
             var response = await _client.PostAsync($"{Endpoint}{UserController}new", content);
+            string resultString = string.Empty;
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
 
                 var result = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync());
-                Console.WriteLine("Got API Key");
+                resultString = "Got API Key";
                 _apiKey = result.ApiKey.ToString();
                 UserName = result.UserName;
             }
             else
             {
-                Console.WriteLine(await response.Content.ReadAsStringAsync());
+                resultString = await response.Content.ReadAsStringAsync();
             }
+
+            return resultString;
         }
 
-        private static async Task UserSet(string args)
+        private static async Task<string> UserSet(string args)
         {
 
             string[] split = args.Split(' ');
@@ -324,11 +347,12 @@ namespace SecuroteckClient
                 {
                     Current = new User { ApiKey = apiKey, UserName = split[0] };
                     File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(Current));
-                    Console.WriteLine("Stored");
+                    return "Stored";
+
                 }
                 catch (System.Security.SecurityException se)
                 {
-
+                    return se.Message;
                 }
             }
             else
@@ -336,16 +360,15 @@ namespace SecuroteckClient
                 //TODO ask john what to do
             }
 
-
+            return string.Empty;
 
         }
 
-        private static async Task UserDelete()
+        private static async Task<string> UserDelete()
         {
             if (Current == null && (_apiKey == null && UserName == null))
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
@@ -357,26 +380,18 @@ namespace SecuroteckClient
 
             var outcome = await response.Content.ReadAsStringAsync();
 
-            if (bool.TryParse(outcome, out var result))
-            {
-                Console.WriteLine(result);
-            }
-            else
-            {
-                Console.WriteLine("False");
-            }
 
 
 
+            return bool.TryParse(outcome, out var result) ? result.ToString() : "false";
         }
 
-        private static async Task ProtectedHello()
+        private static async Task<string> ProtectedHello()
         {
 
             if (Current == null && string.IsNullOrEmpty(_apiKey) && string.IsNullOrEmpty(UserName))
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
@@ -387,10 +402,13 @@ namespace SecuroteckClient
 
             var response = await _client.SendAsync(request);
 
+
+            string result = string.Empty;
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var result = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(result);
+                result = await response.Content.ReadAsStringAsync();
+
 
             }
             else
@@ -398,16 +416,15 @@ namespace SecuroteckClient
                 //TODO unauthorized
             }
 
-
+            return result;
 
         }
 
-        private static async Task ProtectedSha1(string text)
+        private static async Task<string> ProtectedSha1(string text)
         {
             if (_apiKey == null)
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
@@ -419,25 +436,26 @@ namespace SecuroteckClient
 
             var response = await _client.SendAsync(request);
 
+
+            string result = string.Empty;
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                Console.WriteLine(await response.Content.ReadAsStringAsync());
+                result = await response.Content.ReadAsStringAsync();
             }
             else
             {
                 //TODO unauthorized
             }
 
-
-
+            return result;
         }
 
-        private static async Task ProtectedSha256(string text)
+        private static async Task<string> ProtectedSha256(string text)
         {
             if (_apiKey == null)
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
@@ -450,24 +468,27 @@ namespace SecuroteckClient
 
             var response = await _client.SendAsync(request);
 
+
+            string result = string.Empty;
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                Console.WriteLine(await response.Content.ReadAsStringAsync());
+                result = await response.Content.ReadAsStringAsync();
             }
             else
             {
                 //TODO unauthorized
             }
 
-
+            return result;
         }
 
-        private static async Task ProtectedGetPublicKey()
+        private static async Task<string> ProtectedGetPublicKey()
         {
             if (_apiKey == null)
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+
+                return "You need to do a User Post or User Set first";
             }
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}getpublickey"));
@@ -476,33 +497,34 @@ namespace SecuroteckClient
 
             var response = await _client.SendAsync(request);
 
+
+            string result;
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 ServerPublicKey = await response.Content.ReadAsStringAsync();
-                Console.WriteLine("Got Public Key");
+                result = "Got Public Key";
             }
             else
             {
-                Console.WriteLine("Couldn’t Get the Public Key");
+                result = "Couldn’t Get the Public Key";
                 //TODO unauthorized
             }
 
-
+            return result;
         }
 
-        private static async Task ProtectedSignMessage(string message)
+        private static async Task<string> ProtectedSignMessage(string message)
         {
             if (_apiKey == null)
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
             if (ServerPublicKey == null)
             {
-                Console.WriteLine("Client doesn't yet have the public key");
-                return;
+                return "Client doesn't yet have the public key";
             }
 
 
@@ -545,25 +567,23 @@ namespace SecuroteckClient
                         encrypted.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray());
 
 
-                Console.WriteLine(result ? "Message was successfully signed" : "Message was not successfully signed");
+                return result ? "Message was successfully signed" : "Message was not successfully signed";
             }
 
-
+            return string.Empty;
         }
 
-        private static async Task ProtectedAddFifty(string message)
+        private static async Task<string> ProtectedAddFifty(string message)
         {
             if (_apiKey == null)
             {
-                Console.WriteLine("You need to do a User Post or User Set first");
-                return;
+                return "You need to do a User Post or User Set first";
             }
 
 
             if (ServerPublicKey == null)
             {
-                Console.WriteLine("Client doesn't yet have the public key");
-                return;
+                return "Client doesn't yet have the public key";
             }
 
 
@@ -607,6 +627,8 @@ namespace SecuroteckClient
 
             var response = await _client.SendAsync(request);
 
+            string resultString = string.Empty;
+
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var encrypted = (await response.Content.ReadAsStringAsync());
@@ -619,17 +641,19 @@ namespace SecuroteckClient
 
                 try
                 {
-                    var result = BitConverter.ToInt32(decryptedBytes, 0);
-                    Console.WriteLine(result);
+                    resultString = BitConverter.ToInt32(decryptedBytes, 0).ToString();
+
                 }
                 catch (Exception e)
                 {
                     if (e is ArgumentOutOfRangeException || e is ArgumentException)
                     {
-                        Console.WriteLine("An error occurred!");
+                        resultString = "An error occurred!";
                     }
                 }
             }
+
+            return resultString;
         }
 
         private static byte[] FromHexString(string input)
