@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using SecuroteckWebApplicationCore.DataAccess;
 
 namespace SecuroteckWebApplicationCore
 {
@@ -24,6 +21,11 @@ namespace SecuroteckWebApplicationCore
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc();
+            services.AddEntityFrameworkInMemoryDatabase()
+                .AddSingleton(new UserContext()).AddTransient<IUserRepository, UserRepository>();
+            
+           
+         
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -33,8 +35,14 @@ namespace SecuroteckWebApplicationCore
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseMvc(routes => routes.MapRoute(name: "default", template: "api/{controller}/{action}/{id?}"));
+          
+                
+            
+                
+                
 
-            app.UseMvc();
+            
         }
     }
 }
