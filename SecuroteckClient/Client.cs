@@ -46,27 +46,7 @@ namespace SecuroteckClient
         }
     }
 
-    internal class DateTimeSolution
-    {
-        public void PrintDateTimes()
-        {
-            string date = "29/02";
-            int startYear = 2016;
-
-            List<string> dates = new List<string>();
-
-         var n = Enumerable.Range(0, 50).Select(x =>
-            {
-                if (DateTime.TryParse($"{date}/{startYear + x}", out var result) &&
-                    result.DayOfWeek == DayOfWeek.Friday || result.DayOfWeek == DayOfWeek.Saturday ||
-                    result.DayOfWeek == DayOfWeek.Sunday)
-                {
-                    return result.ToShortDateString();
-                }
-                return null;
-            }).Where(x => x != null);
-        }
-    }
+   
 
     internal class User
     {
@@ -114,32 +94,13 @@ namespace SecuroteckClient
 
         };
 
-        private static readonly Dictionary<string, Delegate> MethodLookupRegex = new Dictionary<string, Delegate>
-        {
-            {"TalkBack Hello", new Func<Task>(TalkBackHello)},
-            {@"TalkBack Sort \[[0-9]+(,[0-9]+)*\]", new Func<string, Task>(TalkBackSort)},
-            {"User Get", new Func<string, Task>(UserGet)},
-            {"User Post", new Func<string, Task>(UserPost)},
-            {"User Set", new Func<string, Task>(UserSet)},
-            {"User Delete", new Func<Task>(UserDelete)},
-            {"Protected Hello", new Func< Task>(ProtectedHello)},
-            {"Protected SHA1", new Func<string, Task>(ProtectedSha1)},
-            {"Protected SHA256", new Func<string, Task>(ProtectedSha256)},
-            {"Protected Get PublicKey", new Func<Task>(ProtectedGetPublicKey) },
-            {"Protected Sign", new Func<string, Task>(ProtectedSignMessage) },
-            {"Protected AddFifty", new Func<string, Task>(ProtectedAddFifty) },
-            {"Exit", new Action(() => OnCancel(null, null))}
-
-        };
 
 
 
         static async Task Main(string[] args)
         {
 
-            var d = new DateTimeSolution();
-            d.PrintDateTimes();
-
+         
             _client.DefaultRequestHeaders.Add("Content-Type", "application/json");
             _client.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
 
@@ -148,7 +109,7 @@ namespace SecuroteckClient
                 Current = JsonConvert.DeserializeObject<User>(File.ReadAllText(SaveLocation));
             }
 
-            //functions.Add("543543", TalkBackSort);
+            
 
             Console.Write("Hello. What would you like to do? ");
 
@@ -177,6 +138,7 @@ namespace SecuroteckClient
             {
                 Console.WriteLine("terminating :(");
             }
+            _client.Dispose();
             Console.WriteLine("An unhandled exception occured ");
             Console.WriteLine(e.ExceptionObject.ToString());
             Console.WriteLine("\n\n\n\nPress any key to continue");
@@ -202,10 +164,7 @@ namespace SecuroteckClient
             }
 
 
-            var results = MethodLookupRegex
-                .Where(result => Regex.Match(input, result.Key, RegexOptions.Singleline).Success)
-                .Select(result => result.Value).FirstOrDefault();
-
+        
             var key = MethodLookup.Keys.FirstOrDefault(x => x.StartsWith(input) || input.Contains(x));
 
             if (string.IsNullOrEmpty(key))
@@ -231,6 +190,10 @@ namespace SecuroteckClient
                 if (!string.IsNullOrEmpty(result))
                 {
                     Console.WriteLine(result);
+                }
+                else
+                {
+                    Console.WriteLine("No result from server.");
                 }
 
             }
@@ -458,9 +421,7 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
-
-
-
+            
 
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={text}"));
             request.Headers.Add(nameof(_apiKey), _apiKey);
@@ -487,7 +448,6 @@ namespace SecuroteckClient
         {
             if (_apiKey == null)
             {
-
                 return "You need to do a User Post or User Set first";
             }
 
@@ -549,22 +509,21 @@ namespace SecuroteckClient
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 var encrypted = (await response.Content.ReadAsStringAsync());
-                var provider = new RSACryptoServiceProvider
+                bool result;
+                using (var provider = new RSACryptoServiceProvider
                 {
                     PersistKeyInCsp = false,
                     KeySize = 2048
-                };
-
-                provider.FromXmlString(ServerPublicKey);
-
-
+                })
+                {
+                    provider.FromXmlString(ServerPublicKey);
 
 
 
-                var result =
-                    provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)),
-                        CryptoConfig.MapNameToOID("SHA1"),
-                        encrypted.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray());
+
+
+                    result = provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)), CryptoConfig.MapNameToOID("SHA1"), encrypted.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray());
+                }
 
 
                 return result ? "Message was successfully signed" : "Message was not successfully signed";
@@ -601,54 +560,57 @@ namespace SecuroteckClient
             }
 
 
-            var provider = new RSACryptoServiceProvider
+            string resultString;
+            using (var provider = new RSACryptoServiceProvider
             {
-                PersistKeyInCsp = false,
+                PersistKeyInCsp = true,
                 KeySize = 2048
-            };
-
-            provider.FromXmlString(ServerPublicKey);
-
-
-            var encryptedInt = BitConverter.ToString(provider.Encrypt(BitConverter.GetBytes(num), true));
-
-            var aes = new AesManaged();
-
-            aes.GenerateKey();
-            aes.GenerateIV();
-            var key = BitConverter.ToString(provider.Encrypt(aes.Key, true));
-            var iv = BitConverter.ToString(provider.Encrypt(aes.IV, true));
-
-
-
-            var request = new HttpRequestMessage(HttpMethod.Get,
-                $"{Endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
-            request.Headers.Add(nameof(_apiKey), _apiKey);
-
-            var response = await _client.SendAsync(request);
-
-            string resultString = string.Empty;
-
-            if (response.StatusCode == HttpStatusCode.OK)
+            })
             {
-                var encrypted = (await response.Content.ReadAsStringAsync());
-
-                var decryptor = aes.CreateDecryptor();
-                var encryptedBytes = FromHexString(encrypted);
-
-                var decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+                provider.FromXmlString(ServerPublicKey);
 
 
-                try
+                var encryptedInt = BitConverter.ToString(provider.Encrypt(BitConverter.GetBytes(num), true));
+
+                using (var aes = new AesManaged())
                 {
-                    resultString = BitConverter.ToInt32(decryptedBytes, 0).ToString();
+                    aes.GenerateKey();
+                    aes.GenerateIV();
+                    var key = BitConverter.ToString(provider.Encrypt(aes.Key, true));
+                    var iv = BitConverter.ToString(provider.Encrypt(aes.IV, true));
 
-                }
-                catch (Exception e)
-                {
-                    if (e is ArgumentOutOfRangeException || e is ArgumentException)
+
+
+                    var request = new HttpRequestMessage(HttpMethod.Get,
+                        $"{Endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
+                    request.Headers.Add(nameof(_apiKey), _apiKey);
+
+                    var response = await _client.SendAsync(request);
+
+                    resultString = string.Empty;
+
+                    if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        resultString = "An error occurred!";
+                        var encrypted = (await response.Content.ReadAsStringAsync());
+
+                        var decryptor = aes.CreateDecryptor();
+                        var encryptedBytes = FromHexString(encrypted);
+
+                        var decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+
+
+                        try
+                        {
+                            resultString = BitConverter.ToInt32(decryptedBytes, 0).ToString();
+
+                        }
+                        catch (Exception e)
+                        {
+                            if (e is ArgumentOutOfRangeException || e is ArgumentException)
+                            {
+                                resultString = "An error occurred!";
+                            }
+                        }
                     }
                 }
             }
@@ -656,6 +618,27 @@ namespace SecuroteckClient
             return resultString;
         }
 
+
+        private static async Task<string> GetRequest(string path)
+        {
+            string result;
+
+            try
+            {
+                result = await (await _client.GetAsync(path)).Content.ReadAsStringAsync();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occured: {e.Message}");
+                result = string.Empty;
+              
+            }
+
+            return result;
+
+
+
+        }
         private static byte[] FromHexString(string input)
         {
             return input.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray();
