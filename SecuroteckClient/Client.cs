@@ -27,7 +27,7 @@ namespace SecuroteckClient
 
 
 
-    #region Task 8 and beyond
+  
     public class Client
     {
         private const string Endpoint = "http://localhost:24702/api/";
@@ -79,7 +79,7 @@ namespace SecuroteckClient
 
             client.HttpClient = new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(15),
+                //Timeout = TimeSpan.FromSeconds(15),
             };
             client.HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
 
@@ -688,5 +688,5 @@ namespace SecuroteckClient
 
 
 
-    #endregion
+
 }

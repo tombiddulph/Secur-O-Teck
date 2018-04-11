@@ -43,7 +43,7 @@ namespace SecuroteckWebApplication.Controllers
                 }
             }
 
-            return Request.CreateResponse(HttpStatusCode.OK, Json(result));
+            return Request.CreateResponse(HttpStatusCode.OK, result.OrderBy(x => x));
         }
 
 
