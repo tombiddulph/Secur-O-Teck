@@ -1,5 +1,4 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Web.Http;
 using SecuroteckWebApplication.Config;
 using SecuroteckWebApplication.Controllers.Authorisation;
@@ -7,7 +6,6 @@ using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Models;
 using Unity;
 using Unity.Injection;
-using Unity.Lifetime;
 
 namespace SecuroteckWebApplication
 {

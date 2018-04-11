@@ -30,7 +30,10 @@ namespace SecuroteckClient
   
     public class Client
     {
-        private const string Endpoint = "http://localhost:24702/api/";
+        //private const string Endpoint = "http://localhost:24702/api/";
+
+        private const string Endpoint =
+            "https://securoteck.azurewebsites.net/api/";
         private const string TalkBack = "talkback/";
         private const string UserController = "user/";
         private const string ProtectedController = "protected/";
