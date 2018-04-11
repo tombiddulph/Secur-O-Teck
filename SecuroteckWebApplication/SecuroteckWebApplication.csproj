@@ -149,6 +149,7 @@
   <ItemGroup>
     <Content Include="packages.config" />
     <Content Include="app.manifest" />
+    <None Include="Properties\PublishProfiles\Securoteck - Web Deploy.pubxml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
