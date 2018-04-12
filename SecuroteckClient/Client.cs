@@ -92,7 +92,7 @@ namespace SecuroteckClient
                 {"TalkBack Sort", new Func<string, Task<string>>(client.TalkBackSort)},
                 {"User Get", new Func<string, Task<string>>(client.UserGet)},
                 {"User Post", new Func<string, Task<string>>(client.UserPost)},
-                {"User Set", new Func<string, Task<string>>(client.UserSet)},
+                {"User Set", new Func<string, string, Task<string>>(client.UserSet)},
                 {"User Delete", new Func<Task<string>>(client.UserDelete)},
                 {"Protected Hello", new Func<Task<string>>(client.ProtectedHello)},
                 {"Protected SHA1", new Func<string, Task<string>>(client.ProtectedSha1)},
@@ -199,37 +199,36 @@ namespace SecuroteckClient
                 return; ;
             }
 
-            object[] parameter = null;
+            object[] parameters = null;
             var item = MethodLookup[key];
             Console.WriteLine("...please wait...");
             try
             {
 
-
-                if (item.Method.GetParameters().Length > 0)
+                int paramaterCount = item.Method.GetParameters().Length;
+                if (paramaterCount > 0)
                 {
-                    input = input.Replace(key, string.Empty);
+                    input = input.Replace(key, string.Empty).Trim();
 
 
                     if (string.IsNullOrEmpty(input))
                     {
-                        Console.WriteLine($"Unrecognized command: Missing parameter(s)");
+                        var names = item.Method.GetParameters().Select(name => name.Name).ToList();
+                        Console.WriteLine($"Unrecognized command Missing parameter, expected parameter{(paramaterCount > 1 ? "s" : string.Empty)}: {string.Join(", ", names)}");
                         return;
                     }
 
-                    parameter = new object[] { input };
+                    parameters = paramaterCount != 1 ? input.Split(' ').Cast<object>().ToArray() : new object[] { input };
                 }
 
-
-
-                var result = await (Task<string>)item.DynamicInvoke(parameter);
+                var result = await (Task<string>)item.DynamicInvoke(parameters);
 
 
                 Console.WriteLine(string.IsNullOrEmpty(result) ? "No result from server." : result);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An error occurred: {e.Message}");
+                Console.WriteLine($"An error occurred processing {key}: {e.Message}");
             }
         }
 
@@ -241,17 +240,17 @@ namespace SecuroteckClient
             return await GetRequest($"{Endpoint}{TalkBack}hello");
         }
 
-        public async Task<string> TalkBackSort(string param)
+        public async Task<string> TalkBackSort(string numbers)
         {
 
 
-            param = param.Replace("[", string.Empty).Replace("]", string.Empty);
+            numbers = numbers.Replace("[", string.Empty).Replace("]", string.Empty);
 
             var sb = new StringBuilder();
-            if (!string.IsNullOrEmpty(param))
+            if (!string.IsNullOrEmpty(numbers))
             {
 
-                var split = param.Split(',');
+                var split = numbers.Split(',');
 
                 if (split.Length > 1)
                 {
@@ -311,38 +310,38 @@ namespace SecuroteckClient
             return resultString;
         }
 
-        private Task<string> UserSet(string args)
+        private Task<string> UserSet(string username, string apiKey)
         {
-            string[] split = args.Split(' ');
+            //string[] split = args.Split(' ');
 
-            if (split.Length != 2)
-            {
-                return Task.FromResult($"Invalid number of parameters, the correct way to call this function is\nUser Set [username] [apikey] ");
-            }
+            //if (split.Length != 2)
+            //{
+            //    return Task.FromResult($"Invalid number of parameters, the correct way to call this function is\nUser Set [username] [apikey] ");
+            //}
 
-            if (string.IsNullOrEmpty(split[0]))
-            {
-                return Task.FromResult("Username cannot be blank");
-            }
-
-
-            Task<string> resultTask;
-
-            if (Guid.TryParse(split[1], out var apiKey))
-            {
-                resultTask = Task.FromResult($"Invalid api key - {split[1]}");
-            }
-            else
-            {
-                _current = new User { ApiKey = apiKey, UserName = split[0] };
-                File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(_current));
-                resultTask = Task.FromResult("Stored");
-            }
-
-            return resultTask;
+            //if (string.IsNullOrEmpty(split[0]))
+            //{
+            //    return Task.FromResult("Username cannot be blank");
+            //}
 
 
+            //Task<string> resultTask;
 
+            //if (Guid.TryParse(split[1], out var apiKey))
+            //{
+            //    resultTask = Task.FromResult($"Invalid api key - {split[1]}");
+            //}
+            //else
+            //{
+            //    _current = new User { ApiKey = apiKey, UserName = split[0] };
+            //    File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(_current));
+            //    resultTask = Task.FromResult("Stored");
+            //}
+
+            //return resultTask;
+
+
+            return Task.FromResult(string.Empty);
         }
 
         private async Task<string> UserDelete()
@@ -373,8 +372,6 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
-
-
             var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}hello"));
             request.Headers.Add(nameof(_apiKey), _apiKey);
 
@@ -386,7 +383,7 @@ namespace SecuroteckClient
 
         }
 
-        private async Task<string> ProtectedSha1(string text)
+        private async Task<string> ProtectedSha1(string message)
         {
             if (_apiKey == null)
             {
@@ -394,10 +391,7 @@ namespace SecuroteckClient
             }
 
 
-
-
-
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={text}"));
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={message}"));
             request.Headers.Add(nameof(_apiKey), _apiKey);
 
             var response = await HttpClient.SendAsync(request);
@@ -407,7 +401,7 @@ namespace SecuroteckClient
 
         }
 
-        private async Task<string> ProtectedSha256(string text)
+        private async Task<string> ProtectedSha256(string message)
         {
             if (_current == null)
             {
@@ -416,7 +410,9 @@ namespace SecuroteckClient
 
 
 
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={text}"));
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={message}"));
+
+
             request.Headers.Add(nameof(_apiKey), _apiKey);
 
 
@@ -449,7 +445,7 @@ namespace SecuroteckClient
             else
             {
                 result = "Couldn’t Get the Public Key";
-           
+
             }
 
             return result;
