@@ -7,8 +7,6 @@ namespace SecuroteckWebApplication.Models
         public UserContext() : base()
         {
             Database.SetInitializer(new MigrateDatabaseToLatestVersion<UserContext, Migrations.Configuration>());
-
-
         }
 
         /// <summary>
@@ -27,11 +25,6 @@ namespace SecuroteckWebApplication.Models
         /// </summary>
         public DbSet<LogArchive> LogArchive { get; set; }
 
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        {
 
-
-            base.OnModelCreating(modelBuilder);
-        }
     }
 }

@@ -27,7 +27,7 @@ namespace SecuroteckClient
 
 
 
-  
+
     public class Client
     {
         //private const string Endpoint = "http://localhost:24702/api/";
@@ -89,7 +89,7 @@ namespace SecuroteckClient
             client.MethodLookup = new Dictionary<string, Delegate>
             {
                 {"TalkBack Hello", new Func<Task<string>>(client.TalkBackHello)},
-                {"TalkBack Sort [", new Func<string, Task<string>>(client.TalkBackSort)},
+                {"TalkBack Sort", new Func<string, Task<string>>(client.TalkBackSort)},
                 {"User Get", new Func<string, Task<string>>(client.UserGet)},
                 {"User Post", new Func<string, Task<string>>(client.UserPost)},
                 {"User Set", new Func<string, Task<string>>(client.UserSet)},
@@ -100,7 +100,12 @@ namespace SecuroteckClient
                 {"Protected Get PublicKey", new Func<Task<string>>(client.ProtectedGetPublicKey)},
                 {"Protected Sign", new Func<string, Task<string>>(client.ProtectedSignMessage)},
                 {"Protected AddFifty", new Func<string, Task<string>>(client.ProtectedAddFifty)},
-                {"Exit", new Action(() => Environment.Exit(0))}
+                {"Exit", new Action(() => Environment.Exit(0))},
+                {"Help", new Action(() =>
+                {
+                   client.MethodLookup.Keys.Take(client.MethodLookup.Count - 1).ToList().ForEach(Console.WriteLine);
+
+                }) }
             };
 
             if (File.Exists(client.SaveLocation))
@@ -111,7 +116,11 @@ namespace SecuroteckClient
                     if (!string.IsNullOrEmpty(text))
                     {
                         client._current = JsonConvert.DeserializeObject<User>(text, SerializerSettings);
-                        Console.WriteLine($"Loaded user credentials from file Username: {client._current.UserName}");
+
+
+                        Console.WriteLine(SerializationErrors.Any()
+                            ? $"An error occurred loading stored credentials from file {SerializationErrors.First()}"
+                            : $"Loaded user credentials from file Username: {client._current.UserName}");
                     }
 
 
@@ -150,14 +159,10 @@ namespace SecuroteckClient
 
         private void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
         {
-            if (e.IsTerminating)
-            {
-                Console.WriteLine("terminating :(");
-            }
             this.HttpClient.Dispose();
-            Console.WriteLine("An unhandled exception occured ");
+            Console.WriteLine("An unhandled exception occurred ");
             Console.WriteLine(e.ExceptionObject.ToString());
-            Console.WriteLine("\n\n\n\nPress any key to continue");
+            Console.WriteLine("\n\n\n\nPress any key to exit");
             Console.ReadKey();
         }
 
@@ -190,37 +195,41 @@ namespace SecuroteckClient
 
             if (string.IsNullOrEmpty(key))
             {
-
+                Console.WriteLine("Unrecognized command");
+                return; ;
             }
 
-            object[] param = null;
+            object[] parameter = null;
             var item = MethodLookup[key];
             Console.WriteLine("...please wait...");
             try
             {
-                string result;
-                if (item.Method.GetParameters().Any())
+
+
+                if (item.Method.GetParameters().Length > 0)
                 {
                     input = input.Replace(key, string.Empty);
-                    param = new[] { input };
+
+
                     if (string.IsNullOrEmpty(input))
                     {
                         Console.WriteLine($"Unrecognized command: Missing parameter(s)");
                         return;
                     }
 
+                    parameter = new object[] { input };
                 }
 
 
 
-                result = await (Task<string>)item.DynamicInvoke(param);
+                var result = await (Task<string>)item.DynamicInvoke(parameter);
 
 
                 Console.WriteLine(string.IsNullOrEmpty(result) ? "No result from server." : result);
             }
             catch (Exception e)
             {
-                Console.WriteLine($"An error occurred: { e.Message}");
+                Console.WriteLine($"An error occurred: {e.Message}");
             }
         }
 
@@ -278,12 +287,9 @@ namespace SecuroteckClient
             }
 
 
-
-
-
             var content = new ByteArrayContent(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(username)));
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            var test = PostRequest($"{Endpoint}{UserController}new", content);
+
 
 
             var response = await HttpClient.PostAsync($"{Endpoint}{UserController}new", content);
@@ -305,58 +311,49 @@ namespace SecuroteckClient
             return resultString;
         }
 
-        private async Task<string> UserSet(string args)
+        private Task<string> UserSet(string args)
         {
-
-            string result = string.Empty;
-
             string[] split = args.Split(' ');
 
             if (split.Length != 2)
             {
-
+                return Task.FromResult($"Invalid number of parameters, the correct way to call this function is\nUser Set [username] [apikey] ");
             }
 
             if (string.IsNullOrEmpty(split[0]))
             {
-                //TODO ask john what to do
+                return Task.FromResult("Username cannot be blank");
             }
+
+
+            Task<string> resultTask;
 
             if (Guid.TryParse(split[1], out var apiKey))
             {
-
-                try
-                {
-                    _current = new User { ApiKey = apiKey, UserName = split[0] };
-                    File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(_current));
-                    return "Stored";
-
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("e.Message");
-                }
+                resultTask = Task.FromResult($"Invalid api key - {split[1]}");
             }
             else
             {
-                //TODO ask john what to do
+                _current = new User { ApiKey = apiKey, UserName = split[0] };
+                File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(_current));
+                resultTask = Task.FromResult("Stored");
             }
 
-            return string.Empty;
+            return resultTask;
+
+
 
         }
 
         private async Task<string> UserDelete()
         {
-            if (_current == null && (_apiKey == null && _userName == null))
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
 
-
-
-            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={_userName}"));
-            request.Headers.Add(nameof(_apiKey), _apiKey);
+            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={_current.UserName}"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
             var response = await HttpClient.SendAsync(request);
 
@@ -371,7 +368,7 @@ namespace SecuroteckClient
         private async Task<string> ProtectedHello()
         {
 
-            if (_current == null && string.IsNullOrEmpty(_apiKey) && string.IsNullOrEmpty(_userName))
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
@@ -383,22 +380,9 @@ namespace SecuroteckClient
 
 
             var response = await HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
 
-
-            string result = string.Empty;
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                result = await response.Content.ReadAsStringAsync();
-
-
-            }
-            else
-            {
-                //TODO unauthorized
-            }
-
-            return result;
 
         }
 
@@ -417,25 +401,15 @@ namespace SecuroteckClient
             request.Headers.Add(nameof(_apiKey), _apiKey);
 
             var response = await HttpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
 
 
-            string result = string.Empty;
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                result = await response.Content.ReadAsStringAsync();
-            }
-            else
-            {
-                //TODO unauthorized
-            }
-
-            return result;
         }
 
         private async Task<string> ProtectedSha256(string text)
         {
-            if (_apiKey == null)
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
@@ -447,25 +421,13 @@ namespace SecuroteckClient
 
 
             var response = await HttpClient.SendAsync(request);
-
-
-            string result = string.Empty;
-
-            if (response.StatusCode == HttpStatusCode.OK)
-            {
-                result = await response.Content.ReadAsStringAsync();
-            }
-            else
-            {
-                //TODO unauthorized
-            }
-
-            return result;
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync();
         }
 
         private async Task<string> ProtectedGetPublicKey()
         {
-            if (_apiKey == null)
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
@@ -487,7 +449,7 @@ namespace SecuroteckClient
             else
             {
                 result = "Couldn’t Get the Public Key";
-                //TODO unauthorized
+           
             }
 
             return result;
@@ -495,7 +457,7 @@ namespace SecuroteckClient
 
         private async Task<string> ProtectedSignMessage(string message)
         {
-            if (_apiKey == null)
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
@@ -511,7 +473,7 @@ namespace SecuroteckClient
 
             if (string.IsNullOrEmpty(message))
             {
-                //TODO handle this
+                Console.WriteLine("");
             }
 
 

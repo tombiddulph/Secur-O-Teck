@@ -21,7 +21,10 @@ namespace SecuroteckWebApplication.Controllers
 
         }
 
-
+        /// <summary>
+        /// Checks the database for to see if a user with the specified username has already been created
+        /// </summary>
+        /// <param name="userName">The name of the user to check</param>
         [ActionName("New"), HttpGet]
         public HttpResponseMessage Get([FromUri]string userName)
         {
@@ -31,10 +34,6 @@ namespace SecuroteckWebApplication.Controllers
                 return Request.CreateResponse(HttpStatusCode.OK,
                     "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
             }
-
-
-
-
 
             if (!_userRepository.CheckUser(x => x.UserName == userName))
             {
@@ -51,8 +50,7 @@ namespace SecuroteckWebApplication.Controllers
         /// <summary>
         /// Creates a new user from the given username
         /// </summary>
-        /// <param name="userName"></param>
-        /// <returns></returns>
+        /// <param name="userName">The name of the user to create</param>
         [ActionName("New"), HttpPost]
         public async Task<HttpResponseMessage> Post([FromBody] string userName)
         {
@@ -63,9 +61,6 @@ namespace SecuroteckWebApplication.Controllers
                     "Oops. Make sure your body contains a string with your username and your Content - Type is Content - Type:application / json");
 
             }
-
-            //TODO check for user existence before adding
-
 
             var user = _userRepository.InsertUser(userName);
             await _userRepository.SaveChanges();
@@ -79,10 +74,8 @@ namespace SecuroteckWebApplication.Controllers
         /// Deletes a user by username from the database 
         /// </summary>
         /// <param name="userName">The name of the user to delete</param>
-        /// <returns></returns>
-        [CustomAuthorise]
-        [ActionName("RemoveUser")]
-        [HttpDelete]
+        /// <returns>True if the user has been deleted, otherwise false</returns>
+        [HttpDelete, ActionName("RemoveUser"), CustomAuthorise]
         public async Task<HttpResponseMessage> DeleteUser([FromUri] string userName)
         {
             User user = null;
