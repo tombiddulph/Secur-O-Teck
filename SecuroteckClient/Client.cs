@@ -14,38 +14,22 @@ using Newtonsoft.Json;
 
 namespace SecuroteckClient
 {
-
-
-
-
-
-    internal class User
-    {
-        public Guid ApiKey { get; set; }
-        public string UserName { get; set; }
-    }
-
-
-
-
+    /// <summary>
+    /// Client written to the specification as defined the in the ACW 
+    /// </summary>
     public class Client
     {
-        //private const string Endpoint = "http://localhost:24702/api/";
+        private string _endpoint = "http://localhost:24702/api/";
 
-        private const string Endpoint =
-            "https://securoteck.azurewebsites.net/api/";
         private const string TalkBack = "talkback/";
         private const string UserController = "user/";
         private const string ProtectedController = "protected/";
-        private HttpClient HttpClient;
-        private readonly string SaveLocation = $"{Directory.GetCurrentDirectory()}/savedata.json";
-        private TimeSpan timeout = TimeSpan.FromMinutes(1);
+        private HttpClient _httpClient;
+        private readonly string _saveLocation = $"{Directory.GetCurrentDirectory()}/savedata.json";
+        private TimeSpan _timeout = TimeSpan.FromMinutes(1);
 
-        private string _apiKey = string.Empty;
-        private string _userName = string.Empty;
         private string _serverPublicKey;
         private User _current = null;
-
 
         private static readonly List<string> SerializationErrors = new List<string>();
 
@@ -58,35 +42,22 @@ namespace SecuroteckClient
             }
         };
 
-        private Dictionary<string, Delegate> MethodLookup;
-
-
-
-
+        private Dictionary<string, Delegate> _methodLookup;
 
         [HandleProcessCorruptedStateExceptions]
-        static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var client = new Client();
 
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-            Console.CancelKeyPress += OnCancel;
             AppDomain.CurrentDomain.UnhandledException += client.UnhandledExceptionHandler;
 
 
 
+            client._httpClient = new HttpClient();
+            client._httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
 
-
-
-
-
-            client.HttpClient = new HttpClient
-            {
-                //Timeout = TimeSpan.FromSeconds(15),
-            };
-            client.HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/json; charset=utf-8");
-
-            client.MethodLookup = new Dictionary<string, Delegate>
+            client._methodLookup = new Dictionary<string, Delegate>
             {
                 {"TalkBack Hello", new Func<Task<string>>(client.TalkBackHello)},
                 {"TalkBack Sort", new Func<string, Task<string>>(client.TalkBackSort)},
@@ -103,76 +74,72 @@ namespace SecuroteckClient
                 {"Exit", new Action(() => Environment.Exit(0))},
                 {"Help", new Action(() =>
                 {
-                   client.MethodLookup.Keys.Take(client.MethodLookup.Count - 1).ToList().ForEach(Console.WriteLine);
-
+                   client._methodLookup.Keys.Take(client._methodLookup.Count - 1).ToList().ForEach(Console.WriteLine);
                 }) }
             };
 
-            if (File.Exists(client.SaveLocation))
+            if (File.Exists(client._saveLocation))
             {
                 try
                 {
-                    var text = File.ReadAllText(client.SaveLocation);
+                    var text = File.ReadAllText(client._saveLocation);
                     if (!string.IsNullOrEmpty(text))
                     {
                         client._current = JsonConvert.DeserializeObject<User>(text, SerializerSettings);
-
 
                         Console.WriteLine(SerializationErrors.Any()
                             ? $"An error occurred loading stored credentials from file {SerializationErrors.First()}"
                             : $"Loaded user credentials from file Username: {client._current.UserName}");
                     }
 
-
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine($"Failed to load credentials from file: {e.Message}");
-
                 }
             }
 
-            await client.Run();
-
+            await client.Run().ConfigureAwait(false);
 
 
         }
-
 
         private async Task Run()
         {
             Console.Write("Hello. What would you like to do? ");
-
-            await ProcessInput(Console.ReadLine());
-            this.timeout = TimeSpan.FromSeconds(15);
-            while (true)
+            try
             {
-
-                Console.Write("What would you like to do next? ");
-                string text = Console.ReadLine();
-                Console.Clear();
-                await ProcessInput(text);
-
+                await ProcessInput(Console.ReadLine()).ConfigureAwait(false);
+                this._timeout = TimeSpan.FromSeconds(15);
+                while (true)
+                {
+                    Console.Write("What would you like to do next? ");
+                    string text = Console.ReadLine();
+                    Console.Clear();
+                    await ProcessInput(text).ConfigureAwait(false);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
             }
         }
 
-
         private void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
         {
-            this.HttpClient.Dispose();
+            this._httpClient.Dispose();
             Console.WriteLine("An unhandled exception occurred ");
             Console.WriteLine(e.ExceptionObject.ToString());
             Console.WriteLine("\n\n\n\nPress any key to exit");
             Console.ReadKey();
         }
 
-        private static void OnCancel(object sender, ConsoleCancelEventArgs e)
+        private void OnCancel(object sender, ConsoleCancelEventArgs e)
         {
             Console.WriteLine("Press any key to exit");
             Console.Read();
             Environment.Exit(0);
         }
-
 
         private bool ValidateStoredCredentials()
         {
@@ -190,31 +157,28 @@ namespace SecuroteckClient
 
 
 
-
-            var key = MethodLookup.Keys.FirstOrDefault(method => method.StartsWith(input) || input.Contains(method));
+            var key = _methodLookup.Keys.FirstOrDefault(method => method.StartsWith(input) || input.Contains(method));
 
             if (string.IsNullOrEmpty(key))
             {
                 Console.WriteLine("Unrecognized command");
-                return; ;
+                return;
             }
 
             object[] parameters = null;
-            var item = MethodLookup[key];
+            var item = _methodLookup[key];
             Console.WriteLine("...please wait...");
             try
             {
-
                 int paramaterCount = item.Method.GetParameters().Length;
                 if (paramaterCount > 0)
                 {
                     input = input.Replace(key, string.Empty).Trim();
 
-
-                    if (string.IsNullOrEmpty(input))
+                    if (string.IsNullOrEmpty(input) && !key.Equals("TalkBack Sort"))
                     {
                         var names = item.Method.GetParameters().Select(name => name.Name).ToList();
-                        Console.WriteLine($"Unrecognized command Missing parameter, expected parameter{(paramaterCount > 1 ? "s" : string.Empty)}: {string.Join(", ", names)}");
+                        Console.WriteLine($"Invalid command Missing parameter, expected parameter{(paramaterCount > 1 ? "s" : string.Empty)}: {string.Join(", ", names)}");
                         return;
                     }
 
@@ -222,7 +186,6 @@ namespace SecuroteckClient
                 }
 
                 var result = await (Task<string>)item.DynamicInvoke(parameters);
-
 
                 Console.WriteLine(string.IsNullOrEmpty(result) ? "No result from server." : result);
             }
@@ -232,24 +195,15 @@ namespace SecuroteckClient
             }
         }
 
-
-
-
-        public async Task<string> TalkBackHello()
-        {
-            return await GetRequest($"{Endpoint}{TalkBack}hello");
-        }
+        public async Task<string> TalkBackHello() => await GetRequest($"{_endpoint}{TalkBack}hello").ConfigureAwait(false);
 
         public async Task<string> TalkBackSort(string numbers)
         {
-
-
-            numbers = numbers.Replace("[", string.Empty).Replace("]", string.Empty);
+            numbers = numbers.ReplaceAll("[", "]");
 
             var sb = new StringBuilder();
             if (!string.IsNullOrEmpty(numbers))
             {
-
                 var split = numbers.Split(',');
 
                 if (split.Length > 1)
@@ -263,48 +217,30 @@ namespace SecuroteckClient
                 sb.Append($"integers={split.Last()}");
             }
 
-            return await GetRequest($"{Endpoint}{TalkBack}sort?{sb}");
+            return await GetRequest($"{_endpoint}{TalkBack}sort?{sb}").ConfigureAwait(false);
         }
 
         private async Task<string> UserGet(string username)
         {
-            if (string.IsNullOrEmpty(username))
-            {
-                //TODO ask john again
-            }
-
-
-
-            return await GetRequest($"{Endpoint}{UserController}new?username={username}");
+            return await GetRequest($"{_endpoint}{UserController}new?username={username}").ConfigureAwait(false);
         }
 
         private async Task<string> UserPost(string username)
         {
-            if (string.IsNullOrEmpty(username))
-            {
-                //TODO ask john again
-            }
-
-
             var content = new ByteArrayContent(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(username)));
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-
-
-            var response = await HttpClient.PostAsync($"{Endpoint}{UserController}new", content);
+            var response = await _httpClient.PostAsync($"{_endpoint}{UserController}new", content).ConfigureAwait(false);
             string resultString;
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-
-                var result = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync());
+                _current = JsonConvert.DeserializeObject<User>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
                 resultString = "Got API Key";
-                _apiKey = result.ApiKey.ToString();
-                _userName = result.UserName;
             }
             else
             {
-                resultString = await response.Content.ReadAsStringAsync();
+                resultString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
 
             return resultString;
@@ -312,36 +248,15 @@ namespace SecuroteckClient
 
         private Task<string> UserSet(string username, string apiKey)
         {
-            //string[] split = args.Split(' ');
+            if (!Guid.TryParse(apiKey, out var key))
+            {
+                return Task.FromResult($"Invalid api key {apiKey}");
+            }
 
-            //if (split.Length != 2)
-            //{
-            //    return Task.FromResult($"Invalid number of parameters, the correct way to call this function is\nUser Set [username] [apikey] ");
-            //}
+            this._current = new User { UserName = username, ApiKey = key };
+            File.WriteAllText(_saveLocation, JsonConvert.SerializeObject(_current));
 
-            //if (string.IsNullOrEmpty(split[0]))
-            //{
-            //    return Task.FromResult("Username cannot be blank");
-            //}
-
-
-            //Task<string> resultTask;
-
-            //if (Guid.TryParse(split[1], out var apiKey))
-            //{
-            //    resultTask = Task.FromResult($"Invalid api key - {split[1]}");
-            //}
-            //else
-            //{
-            //    _current = new User { ApiKey = apiKey, UserName = split[0] };
-            //    File.WriteAllText(SaveLocation, JsonConvert.SerializeObject(_current));
-            //    resultTask = Task.FromResult("Stored");
-            //}
-
-            //return resultTask;
-
-
-            return Task.FromResult(string.Empty);
+            return Task.FromResult("Stored");
         }
 
         private async Task<string> UserDelete()
@@ -351,53 +266,44 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{Endpoint}{UserController}RemoveUser?username={_current.UserName}"));
+            var request = new HttpRequestMessage(HttpMethod.Delete, ($"{_endpoint}{UserController}RemoveUser?username={_current.UserName}"));
             request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-            var response = await HttpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
-            var outcome = await response.Content.ReadAsStringAsync();
-
-
-
-
+            var outcome = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return bool.TryParse(outcome, out var result) ? result.ToString() : "false";
         }
 
         private async Task<string> ProtectedHello()
         {
-
             if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}hello"));
-            request.Headers.Add(nameof(_apiKey), _apiKey);
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{_endpoint}{ProtectedController}hello"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-
-            var response = await HttpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync();
-
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         }
 
         private async Task<string> ProtectedSha1(string message)
         {
-            if (_apiKey == null)
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
 
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{_endpoint}{ProtectedController}sha1?message={message}"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha1?message={message}"));
-            request.Headers.Add(nameof(_apiKey), _apiKey);
-
-            var response = await HttpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync();
-
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
         }
 
@@ -408,17 +314,12 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{_endpoint}{ProtectedController}sha256?message={message}"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}sha256?message={message}"));
-
-
-            request.Headers.Add(nameof(_apiKey), _apiKey);
-
-
-            var response = await HttpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsStringAsync();
+            return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
 
         private async Task<string> ProtectedGetPublicKey()
@@ -428,24 +329,21 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
-            var request = new HttpRequestMessage(HttpMethod.Get, ($"{Endpoint}{ProtectedController}getpublickey"));
-            request.Headers.Add(nameof(_apiKey), _apiKey);
+            var request = new HttpRequestMessage(HttpMethod.Get, ($"{_endpoint}{ProtectedController}getpublickey"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-
-            var response = await HttpClient.SendAsync(request);
-
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             string result;
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                _serverPublicKey = await response.Content.ReadAsStringAsync();
+                _serverPublicKey = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 result = "Got Public Key";
             }
             else
             {
                 result = "Couldn’t Get the Public Key";
-
             }
 
             return result;
@@ -458,34 +356,25 @@ namespace SecuroteckClient
                 return "You need to do a User Post or User Set first";
             }
 
-
             if (_serverPublicKey == null)
             {
                 return "Client doesn't yet have the public key";
             }
-
-
-
 
             if (string.IsNullOrEmpty(message))
             {
                 Console.WriteLine("");
             }
 
-
-
-
             var request = new HttpRequestMessage(HttpMethod.Get,
-                ($"{Endpoint}{ProtectedController}sign?message={message}"));
-            request.Headers.Add(nameof(_apiKey), _apiKey);
+                ($"{_endpoint}{ProtectedController}sign?message={message}"));
+            request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-
-
-            var response = await HttpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.OK)
             {
-                var encrypted = (await response.Content.ReadAsStringAsync());
+                var encrypted = (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
                 bool result;
                 using (var provider = new RSACryptoServiceProvider
                 {
@@ -497,7 +386,6 @@ namespace SecuroteckClient
                     result = provider.VerifyHash(new SHA1CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(message)), CryptoConfig.MapNameToOID("SHA1"), encrypted.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray());
                 }
 
-
                 return result ? "Message was successfully signed" : "Message was not successfully signed";
             }
 
@@ -506,31 +394,21 @@ namespace SecuroteckClient
 
         private async Task<string> ProtectedAddFifty(string message)
         {
-            if (_apiKey == null)
+            if (_current == null)
             {
                 return "You need to do a User Post or User Set first";
             }
-
 
             if (_serverPublicKey == null)
             {
                 return "Client doesn't yet have the public key";
             }
 
-
-
-
-            if (string.IsNullOrEmpty(message))
-            {
-                //TODO handle this
-            }
-
             int num;
-            if (!int.TryParse(message, out num))
+            if (string.IsNullOrEmpty(message) || !int.TryParse(message, out num))
             {
-                //TODO handle this
+                return "A valid integer must be given!";
             }
-
 
             string resultString;
             using (var provider = new RSACryptoServiceProvider
@@ -541,7 +419,6 @@ namespace SecuroteckClient
             {
                 provider.FromXmlString(_serverPublicKey);
 
-
                 var encryptedInt = BitConverter.ToString(provider.Encrypt(BitConverter.GetBytes(num), true));
 
                 using (var aes = new AesManaged())
@@ -549,41 +426,41 @@ namespace SecuroteckClient
                     aes.GenerateKey();
                     aes.GenerateIV();
 
-
                     var key = BitConverter.ToString(provider.Encrypt(aes.Key, true));
                     var iv = BitConverter.ToString(provider.Encrypt(aes.IV, true));
 
-
-
                     var request = new HttpRequestMessage(HttpMethod.Get,
-                        $"{Endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
-                    request.Headers.Add(nameof(_apiKey), _apiKey);
+                        $"{_endpoint}{ProtectedController}addfifty?encryptedInteger={encryptedInt}&encryptedsymkey={key}&encryptedIV={iv}");
+                    request.Headers.Add(nameof(_current.ApiKey), _current.ApiKey.ToString());
 
-                    var response = await HttpClient.SendAsync(request);
+                    var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
 
                     resultString = string.Empty;
 
                     if (response.StatusCode != HttpStatusCode.OK) return resultString;
-                    var encrypted = (await response.Content.ReadAsStringAsync());
+                    var encrypted = (await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
                     var decryptor = aes.CreateDecryptor();
                     var encryptedBytes = FromHexString(encrypted);
 
                     var decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
 
-                    resultString = BitConverter.ToInt32(decryptedBytes, 0).ToString();
-
+                    try
+                    {
+                        resultString = BitConverter.ToInt32(decryptedBytes, 0).ToString();
+                    }
+                    catch (Exception e)
+                    {
+                        resultString = "An error occurred!";
+                    }
                 }
             }
 
             return resultString;
         }
 
-
-
         private async Task<string> GetRequest(string path, params (string name, string value)[] headers)
         {
-
             var request = new HttpRequestMessage(HttpMethod.Get, path);
 
             if (headers.Any())
@@ -594,26 +471,21 @@ namespace SecuroteckClient
                 }
             }
 
-            var response = HttpClient.SendAsync(request);
-            var timeOut = Task.Delay(this.timeout);
-            var resultTask = await Task.WhenAny(timeOut, response);
-
+            var response = _httpClient.SendAsync(request);
+            var timeOut = Task.Delay(this._timeout);
+            var resultTask = await Task.WhenAny(timeOut, response).ConfigureAwait(false);
 
             if (timeOut.IsCompleted || resultTask.Id == timeOut.Id)
             {
                 return "Request timed out";
             }
 
-
-
-            return await response.Result.Content.ReadAsStringAsync();
-
+            return await response.Result.Content.ReadAsStringAsync().ConfigureAwait(false);
         }
 
         private async Task<string> GetRequest(string path)
         {
-            return await this.GetRequest(path, new(string name, string value)[0]);
-
+            return await this.GetRequest(path, new(string name, string value)[0]).ConfigureAwait(false);
         }
 
         private async Task<string> PostRequest(string endpoint, HttpContent body)
@@ -621,31 +493,27 @@ namespace SecuroteckClient
 
 
 
-
-            var request = HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, endpoint)
+            var request = _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
                 Content = body
             });
-            var timeOut = Task.Delay(this.timeout);
+            var timeOut = Task.Delay(this._timeout);
 
-            var resulttask = await Task.WhenAny(request, timeOut);
+            var resulttask = await Task.WhenAny(request, timeOut).ConfigureAwait(false);
 
             if (timeOut.IsCompleted || resulttask.Id == timeOut.Id)
             {
                 return "Request timed out";
             }
 
-            return await request.Result.Content.ReadAsStringAsync();
-
+            return await request.Result.Content.ReadAsStringAsync().ConfigureAwait(false);
 
 
 
         }
 
-
         private static byte[] FromHexString(string input) => input?.Split('-').Select(value => Convert.ToByte(value, 16)).ToArray();
     }
-
 
 
 

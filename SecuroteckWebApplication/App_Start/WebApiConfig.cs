@@ -6,6 +6,7 @@ using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Models;
 using Unity;
 using Unity.Injection;
+using Unity.WebApi;
 
 namespace SecuroteckWebApplication
 {
@@ -26,32 +27,12 @@ namespace SecuroteckWebApplication
             rsa.FromXmlString(rsa.ToXmlString(true));
             containter.RegisterInstance(rsa);
 
-
-            
             containter.RegisterType<IUserRepository>(new InjectionFactory(x => new UserRepository(new UserContext())));
-
-            config.DependencyResolver = new UnityResolver(containter);
-
-            // Web API configuration and services
-
-            //var test = ;
-
-
-            GlobalConfiguration.Configuration.MessageHandlers.Add(
-                new DelegatingHandlerProxy<ApiAuthorisationHandler>(containter));
-            //GlobalConfiguration.Configuration.MessageHandlers.Add(new ApiAuthorisationHandler(containter.Resolve(typeof(IUserRepository)) as IUserRepository));
+            config.DependencyResolver = new UnityDependencyResolver(containter);
             
+            GlobalConfiguration.Configuration.MessageHandlers.Add(new DelegatingHandlerProxy<ApiAuthorisationHandler>(containter));
 
-
-
-
-
-
-
-
-            #region Task 7
-            // Configuration for Task 9
-            #endregion
+ 
 
             // Web API routes
             config.MapHttpAttributeRoutes();
