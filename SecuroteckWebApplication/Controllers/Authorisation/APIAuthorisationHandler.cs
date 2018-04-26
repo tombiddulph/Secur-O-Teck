@@ -8,17 +8,25 @@ using System.Threading.Tasks;
 using SecuroteckWebApplication.DataAccess;
 using SecuroteckWebApplication.Extensions;
 using SecuroteckWebApplication.Models;
+using Unity;
 
 namespace SecuroteckWebApplication.Controllers.Authorisation
 {
     public class ApiAuthorisationHandler : DelegatingHandler
     {
-
+        private readonly IUnityContainer _container;
         private readonly IUserRepository _userRepository;
 
-        public ApiAuthorisationHandler(IUserRepository userRepository)
+        public ApiAuthorisationHandler(IUnityContainer container)
         {
-            _userRepository = userRepository;
+            _container = container;
+            _userRepository = container.Resolve(typeof(IUserRepository)) as IUserRepository;
+
+            if (_userRepository == null)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to resolve {nameof(IUserRepository)} in {nameof(ApiAuthorisationHandler)}");
+            }
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

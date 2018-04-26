@@ -27,10 +27,11 @@ namespace SecuroteckWebApplication
             rsa.FromXmlString(rsa.ToXmlString(true));
             containter.RegisterInstance(rsa);
 
+
+
             containter.RegisterType<IUserRepository>(new InjectionFactory(x => new UserRepository(new UserContext())));
             config.DependencyResolver = new UnityDependencyResolver(containter);
-            
-            GlobalConfiguration.Configuration.MessageHandlers.Add(new DelegatingHandlerProxy<ApiAuthorisationHandler>(containter));
+            GlobalConfiguration.Configuration.MessageHandlers.Add(new ApiAuthorisationHandler(containter));
 
  
 

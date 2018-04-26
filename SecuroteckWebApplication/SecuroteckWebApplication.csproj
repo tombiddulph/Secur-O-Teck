@@ -128,6 +128,7 @@
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Config\UnityResolver.cs" />
     <Compile Include="Controllers\Authorisation\APIAuthorisationHandler.cs" />
+    <Compile Include="Controllers\Authorisation\ApiAuthorisationProxy.cs" />
     <Compile Include="Controllers\Authorisation\CustomAuthoriseAttribute.cs" />
     <Compile Include="Controllers\Authorisation\DelegatingHandlerProxy.cs" />
     <Compile Include="Controllers\ProtectedController.cs" />
